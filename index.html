@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CSPORTS | Холст</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -14,7 +14,6 @@
             justify-content: center;
             padding: 20px;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            -webkit-text-size-adjust: 100%;
         }
 
         .stage {
@@ -38,21 +37,10 @@
         }
         .canvas.dragging { cursor: grabbing; }
 
-        /* Единый контейнер */
-        .board-content {
+        .canvas .layer {
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 0;
-            height: 0;
-            transform-origin: center center;
-        }
-
-        /* Карточки */
-        .canvas .layer {
-            position: absolute;
-            top: 0;
-            left: 0;
             transform-origin: center center;
             will-change: transform;
             user-select: none;
@@ -66,20 +54,6 @@
             outline-offset: -2px;
         }
 
-        /* Логотипы */
-        .logo-item {
-            position: absolute;
-            width: 26px;
-            height: 26px;
-            background-size: contain;
-            background-position: center;
-            background-repeat: no-repeat;
-            border-radius: 4px;
-            cursor: pointer;
-            transform: translate(-50%, -50%);
-            pointer-events: auto;
-        }
-
         /* --- БЛОК НАСТРОЕК --- */
         .settings-panel {
             display: flex;
@@ -87,20 +61,7 @@
             gap: 12px;
         }
 
-        /* Ползунок масштаба */
-        .scale-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: #ffffff;
-            padding: 12px 16px;
-            border-radius: 12px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-        }
-        .scale-wrapper span { font-size: 14px; font-weight: 600; white-space: nowrap; }
-        .scale-wrapper input[type="range"] { flex: 1; cursor: pointer; }
-        .scale-value { min-width: 45px; text-align: right; }
-
+        /* Кнопка скрытия глобальных настроек */
         .toggle-global-btn {
             align-self: flex-end;
             padding: 8px 12px;
@@ -171,6 +132,7 @@
             outline: none;
         }
 
+        /* Редактор лого */
         .logo-editor {
             background: #ffffff;
             border: 2px solid #1a2b3c;
@@ -317,33 +279,27 @@
 <body>
 
     <div class="stage">
-        <div class="canvas" id="canvasBoard">
-            <div class="board-content" id="boardContent"></div>
-        </div>
+        <div class="canvas" id="canvasBoard"></div>
 
         <div class="settings-panel">
-            <!-- ПОЛЗУНОК МАСШТАБА -->
-            <div class="scale-wrapper">
-                <span>Масштаб холста:</span>
-                <input type="range" id="boardScale" min="20" max="100" step="1" value="100">
-                <span class="scale-value" id="boardScaleVal">100%</span>
-            </div>
-
             <button class="toggle-global-btn" id="toggleGlobalBtn">Показать глобальные настройки</button>
             
             <div class="global-settings-container hidden" id="globalSettingsContainer">
+                <!-- ГЛОБАЛЬНЫЕ КООРДИНАТЫ КАРТОЧЕК -->
                 <div class="global-settings global-cards">
                     <span class="title">Все карточки (Глобально)</span>
                     <span><span class="label">X:</span><input type="number" id="globalCardX" step="1" value="-3"></span>
                     <span><span class="label">Y:</span><input type="number" id="globalCardY" step="1" value="2"></span>
                 </div>
 
+                <!-- ГЛОБАЛЬНЫЕ КООРДИНАТЫ ЛОГОТИПОВ 1 -->
                 <div class="global-settings global-logos-1">
                     <span class="title">Лого 1 (Глобально)</span>
                     <span><span class="label">X:</span><input type="number" id="globalLogo1X" step="1" value="-6"></span>
                     <span><span class="label">Y:</span><input type="number" id="globalLogo1Y" step="1" value="0"></span>
                 </div>
 
+                <!-- ГЛОБАЛЬНЫЕ КООРДИНАТЫ ЛОГОТИПОВ 2 -->
                 <div class="global-settings global-logos-2">
                     <span class="title">Лого 2 (Глобально)</span>
                     <span><span class="label">X:</span><input type="number" id="globalLogo2X" step="1" value="-58"></span>
@@ -351,6 +307,7 @@
                 </div>
             </div>
 
+            <!-- ПАНЕЛЬ РЕДАКТИРОВАНИЯ ЛОГО -->
             <div class="logo-editor" id="logoEditor">
                 <div class="title">Настройка логотипа</div>
                 <input type="text" id="teamInput" list="teamList" placeholder="Введите название команды..." autocomplete="off" />
@@ -371,13 +328,17 @@
 
     <script>
         const canvas = document.getElementById('canvasBoard');
-        const boardContent = document.getElementById('boardContent');
         const coordsList = document.getElementById('coordsList');
+        const logosLayer = document.createElement('div');
+        logosLayer.id = 'logosLayer';
+        logosLayer.style.cssText = 'position:absolute; inset:0; z-index:10; pointer-events:none;';
+        canvas.appendChild(logosLayer);
         
         const IMG_SRC_1 = 'https://res.cloudinary.com/dplmdnxvk/image/upload/v1794658258/w5mplrlvkecl77ia8fbq.png';
         const IMG_SRC_2 = 'https://res.cloudinary.com/dplmdnxvk/image/upload/v1794662358/tzcyf4txvq00ggwk4soz.png'; 
         const IMG_SRC_3 = 'https://res.cloudinary.com/dplmdnxvk/image/upload/v1794663822/qxugvm4od0mlhf7pzgkm.png';
 
+        // Базовые карточки
         const BASE_CARDS = [
             { id: 1,  x: -210, y: -100 },
             { id: 5,  x: -210, y: -60 },
@@ -435,25 +396,20 @@
         let lastActive = null;
         let isSettingsHiddenMode = false;
         let selectedLogoLayer = null;
-        
-        // Масштаб всего холста (в процентах)
-        let globalBoardScale = 100;
 
         const MIN_USER_SCALE = 1;
         const MAX_USER_SCALE = 1000;
 
+        // Массив логотипов на холсте
         const logoItems = [];
         BASE_CARDS.forEach((card, i) => {
             logoItems.push({ id: `l1_${i}`, type: 'logo1', offsetX: card.x - 31, offsetY: card.y - 12, teamName: '', src: '' });
             logoItems.push({ id: `l2_${i}`, type: 'logo2', offsetX: card.x - 31, offsetY: card.y - 12, teamName: '', src: '' });
         });
 
+        // --- СКРЫТИЕ ГЛОБАЛЬНЫХ НАСТРОЕК ---
         const toggleGlobalBtn = document.getElementById('toggleGlobalBtn');
         const globalSettingsContainer = document.getElementById('globalSettingsContainer');
-        
-        // Ползунок масштаба
-        const boardScaleInput = document.getElementById('boardScale');
-        const boardScaleVal = document.getElementById('boardScaleVal');
 
         toggleGlobalBtn.addEventListener('click', () => {
             globalSettingsContainer.classList.toggle('hidden');
@@ -464,20 +420,9 @@
             }
         });
 
-        // Применяем общий масштаб ко всей группе
-        function updateBoardScale() {
-            boardContent.style.transform = `scale(${globalBoardScale / 100})`;
-        }
-
-        boardScaleInput.addEventListener('input', (e) => {
-            globalBoardScale = parseFloat(e.target.value);
-            boardScaleVal.textContent = globalBoardScale + '%';
-            updateBoardScale();
-        });
-
         function applyTransform(layer) {
             const finalScale = layer.baseFitScale * (layer.userScalePercent / 100);
-            layer.img.style.transform = 
+            layer.img.style.transform =
                 `translate(-50%, -50%) translate(${layer.offsetX}px, ${layer.offsetY}px) scale(${finalScale})`;
         }
 
@@ -500,7 +445,6 @@
         function fitLayerToCanvas(layer) {
             if (!layer.img.naturalWidth || !layer.img.naturalHeight) return;
             const rect = canvas.getBoundingClientRect();
-            // Базовый масштаб подстраивается под текущий размер холста
             layer.baseFitScale = Math.min(rect.width / layer.img.naturalWidth, rect.height / layer.img.naturalHeight);
             refreshLayer(layer);
         }
@@ -569,7 +513,7 @@
             img.src = imgSrc;
             img.alt = '';
             img.draggable = false;
-            boardContent.appendChild(img);
+            canvas.appendChild(img);
 
             const layer = {
                 id,
@@ -736,12 +680,8 @@
         });
         window.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
-            
-            const rect = canvas.getBoundingClientRect();
-            const scale = (rect.width / 1000) * (globalBoardScale / 100);
-            const dx = (e.clientX - dragStartX) / scale;
-            const dy = (e.clientY - dragStartY) / scale;
-            
+            const dx = e.clientX - dragStartX;
+            const dy = e.clientY - dragStartY;
             dragStartPositions.forEach(p => {
                 p.layer.offsetX = p.offsetX + dx;
                 p.layer.offsetY = p.offsetY + dy;
@@ -918,16 +858,27 @@
         const statusLogo = document.getElementById('statusLogo');
 
         function renderLogos() {
-            const oldItems = boardContent.querySelectorAll('.logo-item');
-            oldItems.forEach(el => el.remove());
-
+            logosLayer.innerHTML = '';
             logoItems.forEach(logo => {
                 const div = document.createElement('div');
                 div.className = 'logo-item';
                 div.dataset.id = logo.id;
                 
-                div.style.left = logo.offsetX + 'px';
-                div.style.top = logo.offsetY + 'px';
+                const leftPct = 50 + (logo.offsetX / (canvas.clientWidth / 2)) * 50;
+                const topPct = 50 + (logo.offsetY / (canvas.clientHeight / 2)) * 50;
+                
+                div.style.position = 'absolute';
+                div.style.left = leftPct + '%';
+                div.style.top = topPct + '%';
+                div.style.width = '26px';
+                div.style.height = '26px';
+                div.style.transform = 'translate(-50%, -50%)';
+                div.style.pointerEvents = 'auto';
+                div.style.cursor = 'pointer';
+                div.style.borderRadius = '4px';
+                div.style.backgroundSize = 'contain';
+                div.style.backgroundPosition = 'center';
+                div.style.backgroundRepeat = 'no-repeat';
                 
                 if (logo.src) {
                     div.style.backgroundImage = `url('${logo.src}')`;
@@ -944,7 +895,7 @@
                     if (!selectedLogoLayer || selectedLogoLayer.id !== logo.id) div.style.outline = 'none'; 
                 });
 
-                boardContent.appendChild(div);
+                logosLayer.appendChild(div);
             });
         }
 
@@ -985,7 +936,7 @@
         });
 
         canvas.addEventListener('click', (e) => {
-            if (e.target === canvas || e.target === boardContent) {
+            if (e.target === canvas || e.target.id === 'logosLayer') {
                 selectedLogoLayer = null;
                 logoEditor.style.display = 'none';
                 renderLogos();
