@@ -25,7 +25,6 @@
             padding-top: max(12px, env(safe-area-inset-top));
             padding-bottom: max(12px, env(safe-area-inset-bottom));
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            -webkit-text-size-adjust: 100%;
         }
 
         .stage {
@@ -443,9 +442,10 @@
         const MAX_USER_SCALE = 1000;
 
         // ЭТАЛОННАЯ ШИРИНА ХОЛСТА — под неё настроены координаты BASE_CARDS.
-        // Если при открытии карточки всё равно кажутся слишком большими/маленькими,
-        // поменяй это значение на фактическую ширину холста, при которой всё идеально.
         const REFERENCE_CANVAS_SIZE = 521;
+
+        // Отступ группы карточек от краёв холста (доля от размера холста)
+        const CANVAS_PADDING_RATIO = 0.05;
 
         const logoItems = [];
         BASE_CARDS.forEach((card, i) => {
@@ -487,10 +487,6 @@
             updateInputs(layer);
         }
 
-        // КЛЮЧЕВАЯ ФУНКЦИЯ: масштаб считается относительно ЭТАЛОНА (REFERENCE_CANVAS_SIZE),
-        // а затем умножается на отношение реальной ширины холста к эталону.
-        // Это гарантирует, что карточки занимают одинаковую долю холста при любом размере экрана,
-        // и не «прыгают» при зуме страницы (потому что layout-размер холста при зуме не меняется).
         function fitLayerToCanvas(layer) {
             if (!layer.img.naturalWidth || !layer.img.naturalHeight) return;
             const rect = canvas.getBoundingClientRect();
@@ -808,7 +804,59 @@
             updateGlobalInputs();
         }
 
-        document.getElementById('centerBtn').addEventListener('click', centerAllLayers);
+        // ===== ВПИСЫВАНИЕ ВСЕЙ ГРУППЫ КАРТОЧЕК В ХОЛСТ С ОТСТУПОМ =====
+        function fitGroupToCanvas() {
+            if (layers.length === 0) return;
+
+            const cw = canvas.clientWidth;
+            const ch = canvas.clientHeight;
+            if (!cw || !ch) return;
+
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+
+            layers.forEach(layer => {
+                const finalScale = layer.baseFitScale * (layer.userScalePercent / 100);
+                const w = (layer.img.naturalWidth || 100) * finalScale;
+                const h = (layer.img.naturalHeight || 100) * finalScale;
+                minX = Math.min(minX, layer.offsetX - w / 2);
+                maxX = Math.max(maxX, layer.offsetX + w / 2);
+                minY = Math.min(minY, layer.offsetY - h / 2);
+                maxY = Math.max(maxY, layer.offsetY + h / 2);
+            });
+
+            const groupW = maxX - minX;
+            const groupH = maxY - minY;
+            if (groupW <= 0 || groupH <= 0) return;
+
+            const padX = cw * CANVAS_PADDING_RATIO;
+            const padY = ch * CANVAS_PADDING_RATIO;
+            const availW = cw - padX * 2;
+            const availH = ch - padY * 2;
+
+            let k = 1;
+            if (groupW > availW) k = Math.min(k, availW / groupW);
+            if (groupH > availH) k = Math.min(k, availH / groupH);
+
+            const cx = (minX + maxX) / 2;
+            const cy = (minY + maxY) / 2;
+
+            if (k < 1) {
+                layers.forEach(layer => {
+                    layer.offsetX = cx + (layer.offsetX - cx) * k;
+                    layer.offsetY = cy + (layer.offsetY - cy) * k;
+                    layer.userScalePercent *= k;
+                    applyTransform(layer);
+                    updateInputs(layer);
+                });
+                updateGlobalInputs();
+            }
+        }
+
+        document.getElementById('centerBtn').addEventListener('click', () => {
+            centerAllLayers();
+            fitGroupToCanvas();
+        });
 
         const globalCardXInput = document.getElementById('globalCardX');
         const globalCardYInput = document.getElementById('globalCardY');
@@ -1027,7 +1075,6 @@
             }
         });
 
-        // ===== ИНИЦИАЛИЗАЦИЯ С ОЖИДАНИЕМ LAYOUT =====
         function initDefaultLayers() {
             DEFAULT_LAYERS.forEach(preset => {
                 createLayer(null, preset);
@@ -1040,12 +1087,12 @@
             const checkAllLoaded = () => {
                 loadedCount++;
                 if (loadedCount === total) {
-                    // Ждём два кадра, чтобы Safari успел применить финальный layout
                     requestAnimationFrame(() => {
                         requestAnimationFrame(() => {
                             layers.forEach(l => fitLayerToCanvas(l));
                             renderLogos();
                             centerAllLayers();
+                            fitGroupToCanvas();
 
                             setTimeout(() => {
                                 globalCardXInput.value = -3;
@@ -1077,8 +1124,6 @@
             });
         }
 
-        // ===== ResizeObserver — реагирует ТОЛЬКО на реальное изменение размера холста =====
-        // При pinch-zoom страницы layout-размер холста не меняется, поэтому карточки не «прыгают».
         let lastCanvasWidth = 0;
         const ro = new ResizeObserver(entries => {
             for (const entry of entries) {
@@ -1087,15 +1132,16 @@
                 lastCanvasWidth = w;
                 layers.forEach(l => fitLayerToCanvas(l));
                 renderLogos();
+                fitGroupToCanvas();
             }
         });
         ro.observe(canvas);
 
-        // Поворот экрана — пересчёт после стабилизации layout
         window.addEventListener('orientationchange', () => {
             setTimeout(() => {
                 layers.forEach(l => fitLayerToCanvas(l));
                 renderLogos();
+                fitGroupToCanvas();
             }, 350);
         });
 
