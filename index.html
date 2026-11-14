@@ -35,29 +35,24 @@
             overflow: hidden;
             touch-action: none;
             cursor: grab;
-            /* Устанавливаем центр для абсолютного позиционирования */
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
         .canvas.dragging { cursor: grabbing; }
 
-        /* ВИРТУАЛЬНЫЙ ХОЛСТ 1000x1000 (он всегда одного размера, а CSS его зумит) */
-        .virtual-canvas {
+        /* Единый контейнер */
+        .board-content {
             position: absolute;
-            width: 1000px;
-            height: 1000px;
             top: 50%;
             left: 50%;
+            width: 0;
+            height: 0;
             transform-origin: center center;
-            /* Начальный масштаб задается через JS, но по умолчанию скрыт */
         }
 
         /* Карточки */
         .canvas .layer {
             position: absolute;
-            top: 50%;
-            left: 50%;
+            top: 0;
+            left: 0;
             transform-origin: center center;
             will-change: transform;
             user-select: none;
@@ -91,6 +86,20 @@
             flex-direction: column;
             gap: 12px;
         }
+
+        /* Ползунок масштаба */
+        .scale-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #ffffff;
+            padding: 12px 16px;
+            border-radius: 12px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        }
+        .scale-wrapper span { font-size: 14px; font-weight: 600; white-space: nowrap; }
+        .scale-wrapper input[type="range"] { flex: 1; cursor: pointer; }
+        .scale-value { min-width: 45px; text-align: right; }
 
         .toggle-global-btn {
             align-self: flex-end;
@@ -309,11 +318,17 @@
 
     <div class="stage">
         <div class="canvas" id="canvasBoard">
-            <!-- Виртуальный холст, где всё лежит -->
-            <div class="virtual-canvas" id="virtualCanvas"></div>
+            <div class="board-content" id="boardContent"></div>
         </div>
 
         <div class="settings-panel">
+            <!-- ПОЛЗУНОК МАСШТАБА -->
+            <div class="scale-wrapper">
+                <span>Масштаб холста:</span>
+                <input type="range" id="boardScale" min="20" max="100" step="1" value="100">
+                <span class="scale-value" id="boardScaleVal">100%</span>
+            </div>
+
             <button class="toggle-global-btn" id="toggleGlobalBtn">Показать глобальные настройки</button>
             
             <div class="global-settings-container hidden" id="globalSettingsContainer">
@@ -356,7 +371,7 @@
 
     <script>
         const canvas = document.getElementById('canvasBoard');
-        const virtualCanvas = document.getElementById('virtualCanvas');
+        const boardContent = document.getElementById('boardContent');
         const coordsList = document.getElementById('coordsList');
         
         const IMG_SRC_1 = 'https://res.cloudinary.com/dplmdnxvk/image/upload/v1794658258/w5mplrlvkecl77ia8fbq.png';
@@ -420,6 +435,9 @@
         let lastActive = null;
         let isSettingsHiddenMode = false;
         let selectedLogoLayer = null;
+        
+        // Масштаб всего холста (в процентах)
+        let globalBoardScale = 100;
 
         const MIN_USER_SCALE = 1;
         const MAX_USER_SCALE = 1000;
@@ -432,6 +450,10 @@
 
         const toggleGlobalBtn = document.getElementById('toggleGlobalBtn');
         const globalSettingsContainer = document.getElementById('globalSettingsContainer');
+        
+        // Ползунок масштаба
+        const boardScaleInput = document.getElementById('boardScale');
+        const boardScaleVal = document.getElementById('boardScaleVal');
 
         toggleGlobalBtn.addEventListener('click', () => {
             globalSettingsContainer.classList.toggle('hidden');
@@ -442,18 +464,19 @@
             }
         });
 
-        // Функция пересчета масштаба виртуального холста
-        function updateVirtualScale() {
-            const rect = canvas.getBoundingClientRect();
-            const scale = rect.width / 1000; // Виртуальный холст 1000px, реальный = ширина экрана
-            virtualCanvas.style.transform = `translate(-50%, -50%) scale(${scale})`;
+        // Применяем общий масштаб ко всей группе
+        function updateBoardScale() {
+            boardContent.style.transform = `scale(${globalBoardScale / 100})`;
         }
-        window.addEventListener('resize', updateVirtualScale);
-        updateVirtualScale();
+
+        boardScaleInput.addEventListener('input', (e) => {
+            globalBoardScale = parseFloat(e.target.value);
+            boardScaleVal.textContent = globalBoardScale + '%';
+            updateBoardScale();
+        });
 
         function applyTransform(layer) {
             const finalScale = layer.baseFitScale * (layer.userScalePercent / 100);
-            // Центрируем и позиционируем карточку
             layer.img.style.transform = 
                 `translate(-50%, -50%) translate(${layer.offsetX}px, ${layer.offsetY}px) scale(${finalScale})`;
         }
@@ -476,9 +499,9 @@
 
         function fitLayerToCanvas(layer) {
             if (!layer.img.naturalWidth || !layer.img.naturalHeight) return;
-            // Базовый масштаб считаем относительно ВИРТУАЛЬНОГО холста (1000x1000)
-            // и уменьшаем на 2, чтобы карточки не были гигантскими
-            layer.baseFitScale = Math.min(1000 / layer.img.naturalWidth, 1000 / layer.img.naturalHeight);
+            const rect = canvas.getBoundingClientRect();
+            // Базовый масштаб подстраивается под текущий размер холста
+            layer.baseFitScale = Math.min(rect.width / layer.img.naturalWidth, rect.height / layer.img.naturalHeight);
             refreshLayer(layer);
         }
 
@@ -546,7 +569,7 @@
             img.src = imgSrc;
             img.alt = '';
             img.draggable = false;
-            virtualCanvas.appendChild(img);
+            boardContent.appendChild(img);
 
             const layer = {
                 id,
@@ -661,7 +684,6 @@
             updateGlobalInputs();
         }
 
-        // --- ПЕРЕТАСКИВАНИЕ (учет масштаба виртуального холста) ---
         let isDragging = false;
         let dragStartX = 0, dragStartY = 0;
         let dragStartPositions = [];
@@ -715,9 +737,8 @@
         window.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
             
-            // Учитываем масштаб при перетаскивании
             const rect = canvas.getBoundingClientRect();
-            const scale = rect.width / 1000;
+            const scale = (rect.width / 1000) * (globalBoardScale / 100);
             const dx = (e.clientX - dragStartX) / scale;
             const dy = (e.clientY - dragStartY) / scale;
             
@@ -897,7 +918,7 @@
         const statusLogo = document.getElementById('statusLogo');
 
         function renderLogos() {
-            const oldItems = virtualCanvas.querySelectorAll('.logo-item');
+            const oldItems = boardContent.querySelectorAll('.logo-item');
             oldItems.forEach(el => el.remove());
 
             logoItems.forEach(logo => {
@@ -923,7 +944,7 @@
                     if (!selectedLogoLayer || selectedLogoLayer.id !== logo.id) div.style.outline = 'none'; 
                 });
 
-                virtualCanvas.appendChild(div);
+                boardContent.appendChild(div);
             });
         }
 
@@ -964,7 +985,7 @@
         });
 
         canvas.addEventListener('click', (e) => {
-            if (e.target === canvas || e.target === virtualCanvas) {
+            if (e.target === canvas || e.target === boardContent) {
                 selectedLogoLayer = null;
                 logoEditor.style.display = 'none';
                 renderLogos();
