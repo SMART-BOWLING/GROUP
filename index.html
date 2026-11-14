@@ -35,13 +35,27 @@
             overflow: hidden;
             touch-action: none;
             cursor: grab;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .canvas.dragging { cursor: grabbing; }
 
-        .canvas .layer {
+        /* ЕДИНЫЙ КОНТЕЙНЕР ДЛЯ ВСЕГО (КАРТОЧЕК И ЛОГОТИПОВ) */
+        .board-content {
             position: absolute;
             top: 50%;
             left: 50%;
+            width: 0;
+            height: 0;
+            transform-origin: center center;
+        }
+
+        /* Карточки */
+        .canvas .layer {
+            position: absolute;
+            top: 0;
+            left: 0;
             transform-origin: center center;
             will-change: transform;
             user-select: none;
@@ -49,10 +63,28 @@
             pointer-events: none;
             max-width: none;
             max-height: none;
+            /* Центрируем карточку относительно её координат */
+            margin-left: -50%; 
+            margin-top: -50%;
+            /* Но так как мы не знаем точный размер до загрузки, используем transform в JS */
         }
         .canvas .layer.selected {
             outline: 2px dashed rgba(255, 255, 255, 0.9);
             outline-offset: -2px;
+        }
+
+        /* Логотипы */
+        .logo-item {
+            position: absolute;
+            width: 26px;
+            height: 26px;
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            border-radius: 4px;
+            cursor: pointer;
+            transform: translate(-50%, -50%);
+            pointer-events: auto;
         }
 
         /* --- БЛОК НАСТРОЕК --- */
@@ -273,18 +305,14 @@
             text-align: center;
             font-weight: 500;
         }
-
-        @media (max-width: 500px) {
-            body { padding: 12px 8px; }
-            .global-settings { padding: 10px; gap: 8px; font-size: 13px; }
-            .global-settings input[type="number"] { width: 60px; font-size: 13px; }
-        }
     </style>
 </head>
 <body>
 
     <div class="stage">
-        <div class="canvas" id="canvasBoard"></div>
+        <div class="canvas" id="canvasBoard">
+            <div class="board-content" id="boardContent"></div>
+        </div>
 
         <div class="settings-panel">
             <button class="toggle-global-btn" id="toggleGlobalBtn">Показать глобальные настройки</button>
@@ -329,11 +357,8 @@
 
     <script>
         const canvas = document.getElementById('canvasBoard');
+        const boardContent = document.getElementById('boardContent');
         const coordsList = document.getElementById('coordsList');
-        const logosLayer = document.createElement('div');
-        logosLayer.id = 'logosLayer';
-        logosLayer.style.cssText = 'position:absolute; inset:0; z-index:10; pointer-events:none;';
-        canvas.appendChild(logosLayer);
         
         const IMG_SRC_1 = 'https://res.cloudinary.com/dplmdnxvk/image/upload/v1794658258/w5mplrlvkecl77ia8fbq.png';
         const IMG_SRC_2 = 'https://res.cloudinary.com/dplmdnxvk/image/upload/v1794662358/tzcyf4txvq00ggwk4soz.png'; 
@@ -400,7 +425,6 @@
         const MIN_USER_SCALE = 1;
         const MAX_USER_SCALE = 1000;
 
-        // Координаты логотипов теперь в пикселях (как у карточек), чтобы они не "улетали" на телефонах
         const logoItems = [];
         BASE_CARDS.forEach((card, i) => {
             logoItems.push({ id: `l1_${i}`, type: 'logo1', offsetX: card.x - 31, offsetY: card.y - 12, teamName: '', src: '' });
@@ -421,7 +445,8 @@
 
         function applyTransform(layer) {
             const finalScale = layer.baseFitScale * (layer.userScalePercent / 100);
-            layer.img.style.transform =
+            // Центрируем картинку и применяем смещение
+            layer.img.style.transform = 
                 `translate(-50%, -50%) translate(${layer.offsetX}px, ${layer.offsetY}px) scale(${finalScale})`;
         }
 
@@ -512,7 +537,10 @@
             img.src = imgSrc;
             img.alt = '';
             img.draggable = false;
-            canvas.appendChild(img);
+            // Убираем принудительные проценты из CSS, так как центрируем через transform в JS
+            img.style.top = '0';
+            img.style.left = '0';
+            boardContent.appendChild(img);
 
             const layer = {
                 id,
@@ -856,36 +884,17 @@
         const teamInput = document.getElementById('teamInput');
         const statusLogo = document.getElementById('statusLogo');
 
-        // ИСПРАВЛЕНО: теперь используем пиксели, как и у карточек, чтобы ничего не слетало
         function renderLogos() {
-            logosLayer.innerHTML = '';
-            
-            const canvasRect = canvas.getBoundingClientRect();
-            const cw = canvasRect.width;
-            const ch = canvasRect.height;
+            const oldItems = boardContent.querySelectorAll('.logo-item');
+            oldItems.forEach(el => el.remove());
 
             logoItems.forEach(logo => {
                 const div = document.createElement('div');
                 div.className = 'logo-item';
                 div.dataset.id = logo.id;
                 
-                // Переводим пиксели в позицию абсолютного центра (50% холста) + смещение
-                const x = cw / 2 + logo.offsetX;
-                const y = ch / 2 + logo.offsetY;
-                
-                div.style.position = 'absolute';
-                div.style.left = x + 'px';
-                div.style.top = y + 'px';
-                // Размер 26x26 пикселей (как на ПК, так и на телефоне)
-                div.style.width = '26px';
-                div.style.height = '26px';
-                div.style.transform = 'translate(-50%, -50%)';
-                div.style.pointerEvents = 'auto';
-                div.style.cursor = 'pointer';
-                div.style.borderRadius = '4px';
-                div.style.backgroundSize = 'contain';
-                div.style.backgroundPosition = 'center';
-                div.style.backgroundRepeat = 'no-repeat';
+                div.style.left = logo.offsetX + 'px';
+                div.style.top = logo.offsetY + 'px';
                 
                 if (logo.src) {
                     div.style.backgroundImage = `url('${logo.src}')`;
@@ -902,7 +911,7 @@
                     if (!selectedLogoLayer || selectedLogoLayer.id !== logo.id) div.style.outline = 'none'; 
                 });
 
-                logosLayer.appendChild(div);
+                boardContent.appendChild(div);
             });
         }
 
@@ -943,7 +952,7 @@
         });
 
         canvas.addEventListener('click', (e) => {
-            if (e.target === canvas || e.target.id === 'logosLayer') {
+            if (e.target === canvas || e.target === boardContent) {
                 selectedLogoLayer = null;
                 logoEditor.style.display = 'none';
                 renderLogos();
@@ -995,11 +1004,6 @@
         setTimeout(() => {
             if (!isSettingsHiddenMode) toggleHideSettings();
         }, 100);
-
-        // Пересчитываем логотипы при ресайзе экрана/телефона
-        window.addEventListener('resize', () => {
-            renderLogos();
-        });
     </script>
 </body>
 </html>
