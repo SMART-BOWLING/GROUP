@@ -2,26 +2,27 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>CSPORTS | Холст</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
-        html, body {
-            width: 100%;
-            overflow-x: hidden;
+        html {
+            height: 100%;
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
         }
 
         body {
             background: #f2f2f7;
-            min-height: 100vh;
-            min-height: 100dvh;
+            min-height: 100%;
             display: flex;
             align-items: flex-start;
             justify-content: center;
             padding: 12px;
             padding-left: max(12px, env(safe-area-inset-left));
             padding-right: max(12px, env(safe-area-inset-right));
+            padding-top: max(12px, env(safe-area-inset-top));
             padding-bottom: max(12px, env(safe-area-inset-bottom));
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             -webkit-text-size-adjust: 100%;
@@ -40,8 +41,6 @@
             position: relative;
             width: 100%;
             aspect-ratio: 1 / 1;
-            max-height: 70vh;
-            max-height: 70dvh;
             background-color: #6a1b9a;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -310,7 +309,6 @@
 
         @media (max-width: 480px) {
             body { padding: 8px; padding-top: max(8px, env(safe-area-inset-top)); }
-            .canvas { max-height: 60vh; max-height: 60dvh; }
             .coords { padding: 10px; }
             .coords .title { flex-basis: 100%; border-right: none; padding-right: 0; padding-bottom: 6px; border-bottom: 1px solid #e5e5ea; }
             .coords input[type="number"] { width: 72px; }
@@ -923,7 +921,6 @@
         const statusLogo = document.getElementById('statusLogo');
 
         function getLogoSize() {
-            // Адаптивный размер логотипа: от 18 до 30px в зависимости от ширины холста
             const w = canvas.clientWidth || 300;
             return Math.round(Math.min(30, Math.max(18, w * 0.055)));
         }
@@ -1061,7 +1058,6 @@
             if (!isSettingsHiddenMode) toggleHideSettings();
         }, 100);
 
-        // Пересчёт при изменении размера окна/повороте экрана
         let resizeTimer;
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimer);
@@ -1071,7 +1067,6 @@
             }, 120);
         });
 
-        // Пересчёт при повороте экрана (orientationchange)
         window.addEventListener('orientationchange', () => {
             setTimeout(() => {
                 layers.forEach(l => fitLayerToCanvas(l));
