@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSPORTS | Холст</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #f2f2f7;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .stage {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+            max-width: 521px;
+        }
+
+        .canvas {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background-color: #6a1b9a;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            touch-action: none;
+            cursor: grab;
+        }
+        .canvas.dragging { cursor: grabbing; }
+
+        .canvas .layer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform-origin: center center;
+            will-change: transform;
+            user-select: none;
+            -webkit-user-drag: none;
+            pointer-events: none;
+            max-width: none;
+            max-height: none;
+        }
+        .canvas .layer.selected {
+            outline: 2px dashed rgba(255, 255, 255, 0.9);
+            outline-offset: -2px;
+        }
+
+        /* --- БЛОК НАСТРОЕК --- */
+        .settings-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Кнопка скрытия глобальных настроек */
+        .toggle-global-btn {
+            align-self: flex-end;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            background: #e5e5ea;
+            color: #1a2b3c;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: -4px;
+        }
+        .toggle-global-btn:hover { background: #d5d5da; }
+
+        .global-settings-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .global-settings-container.hidden {
+            display: none;
+        }
+
+        .global-settings {
+            border-radius: 10px;
+            padding: 12px 14px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #1a2b3c;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .global-settings .title {
+            padding-right: 8px;
+            font-weight: 700;
+        }
+
+        .global-cards { background: #e3f2fd; border: 2px solid #42a5f5; }
+        .global-cards .title { border-right: 1px solid #90caf9; color: #1565c0; }
+        .global-cards input[type="number"] { border: 1px solid #90caf9; }
+        .global-cards input[type="number"]:focus { border-color: #1565c0; }
+
+        .global-logos-1 { background: #fff9c4; border: 2px solid #fbc02d; }
+        .global-logos-1 .title { border-right: 1px solid #fbc02d; color: #f57f17; }
+        .global-logos-1 input[type="number"] { border: 1px solid #fbc02d; }
+        .global-logos-1 input[type="number"]:focus { border-color: #f57f17; }
+
+        .global-logos-2 { background: #fce4ec; border: 2px solid #f06292; }
+        .global-logos-2 .title { border-right: 1px solid #f06292; color: #c2185b; }
+        .global-logos-2 input[type="number"] { border: 1px solid #f06292; }
+        .global-logos-2 input[type="number"]:focus { border-color: #c2185b; }
+
+        .global-settings input[type="number"] {
+            width: 74px;
+            padding: 6px 8px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 700;
+            text-align: right;
+            border-radius: 6px;
+            background: #ffffff;
+            color: #1a2b3c;
+            outline: none;
+        }
+
+        /* Редактор лого */
+        .logo-editor {
+            background: #ffffff;
+            border: 2px solid #1a2b3c;
+            border-radius: 10px;
+            padding: 12px 14px;
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .logo-editor .title { font-size: 14px; font-weight: 700; color: #1a2b3c; }
+        .logo-editor input {
+            padding: 10px;
+            border: 1px solid #e5e5ea;
+            border-radius: 6px;
+            font-size: 15px;
+            outline: none;
+            font-weight: 600;
+            color: #1a2b3c;
+        }
+        .logo-editor input:focus { border-color: #1a2b3c; }
+        .logo-editor .status-inline { font-size: 12px; font-weight: 600; min-height: 14px; }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .add-btn, .hide-checked-btn, .center-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            min-width: 140px;
+        }
+        .add-btn { background: #1a2b3c; color: #fff; }
+        .add-btn:hover { background: #0f1a26; }
+        .hide-checked-btn { background: #e5e5ea; color: #1a2b3c; }
+        .hide-checked-btn:hover { background: #d5d5da; }
+        .hide-checked-btn.active { background: #1a2b3c; color: #fff; }
+        .center-btn { background: #4a5568; color: #fff; width: 100%; }
+        .center-btn:hover { background: #2d3748; }
+
+        .coords-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .coords {
+            background: #ffffff;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1a2b3c;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 12px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+            font-variant-numeric: tabular-nums;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: border-color 0.15s;
+        }
+        .coords.selected {
+            border-color: #1a2b3c;
+            background: #f7f9fc;
+        }
+        
+        .coords.hidden-settings {
+            display: none !important;
+        }
+
+        .coords .visibility-toggle {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-right: 8px;
+            cursor: pointer;
+        }
+        .coords .visibility-toggle input {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+            accent-color: #1a2b3c;
+        }
+
+        .coords .title {
+            color: #1a2b3c;
+            font-weight: 700;
+            padding-right: 8px;
+            border-right: 1px solid #e5e5ea;
+        }
+        .coords span { white-space: nowrap; }
+        .coords .label { color: #8e8e93; font-weight: 500; margin-right: 4px; }
+
+        .coords input[type="number"] {
+            width: 64px;
+            padding: 4px 6px;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: right;
+            border: 1px solid #e5e5ea;
+            border-radius: 6px;
+            background: #f2f2f7;
+            color: #1a2b3c;
+            outline: none;
+            font-variant-numeric: tabular-nums;
+        }
+        .coords input[type="number"]:focus {
+            background: #fff;
+            border-color: #1a2b3c;
+        }
+
+        .coords .remove {
+            margin-left: auto;
+            padding: 4px 10px;
+            border: none;
+            border-radius: 6px;
+            background: #ffe5e5;
+            color: #b00020;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .coords .remove:hover { background: #ffd0d0; }
+
+        .hint {
+            font-size: 12px;
+            color: #8e8e93;
+            text-align: center;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="stage">
+        <div class="canvas" id="canvasBoard"></div>
+
+        <div class="settings-panel">
+            <button class="toggle-global-btn" id="toggleGlobalBtn">Показать глобальные настройки</button>
+            
+            <div class="global-settings-container hidden" id="globalSettingsContainer">
+                <!-- ГЛОБАЛЬНЫЕ КООРДИНАТЫ КАРТОЧЕК -->
+                <div class="global-settings global-cards">
+                    <span class="title">Все карточки (Глобально)</span>
+                    <span><span class="label">X:</span><input type="number" id="globalCardX" step="1" value="-3"></span>
+                    <span><span class="label">Y:</span><input type="number" id="globalCardY" step="1" value="2"></span>
+                </div>
+
+                <!-- ГЛОБАЛЬНЫЕ КООРДИНАТЫ ЛОГОТИПОВ 1 -->
+                <div class="global-settings global-logos-1">
+                    <span class="title">Лого 1 (Глобально)</span>
+                    <span><span class="label">X:</span><input type="number" id="globalLogo1X" step="1" value="-6"></span>
+                    <span><span class="label">Y:</span><input type="number" id="globalLogo1Y" step="1" value="0"></span>
+                </div>
+
+                <!-- ГЛОБАЛЬНЫЕ КООРДИНАТЫ ЛОГОТИПОВ 2 -->
+                <div class="global-settings global-logos-2">
+                    <span class="title">Лого 2 (Глобально)</span>
+                    <span><span class="label">X:</span><input type="number" id="globalLogo2X" step="1" value="-58"></span>
+                    <span><span class="label">Y:</span><input type="number" id="globalLogo2Y" step="1" value="0"></span>
+                </div>
+            </div>
+
+            <!-- ПАНЕЛЬ РЕДАКТИРОВАНИЯ ЛОГО -->
+            <div class="logo-editor" id="logoEditor">
+                <div class="title">Настройка логотипа</div>
+                <input type="text" id="teamInput" list="teamList" placeholder="Введите название команды..." autocomplete="off" />
+                <div id="statusLogo" class="status-inline"></div>
+                <datalist id="teamList"></datalist>
+            </div>
+
+            <div class="controls">
+                <button class="add-btn" id="addBtn">+ Добавить копию</button>
+                <button class="hide-checked-btn" id="hideCheckedBtn">Скрыть настройки</button>
+            </div>
+            <button class="center-btn" id="centerBtn">Центрировать всё на холсте</button>
+
+            <div class="coords-list" id="coordsList"></div>
+            <div class="hint">Кликните по любому логотипу на холсте, чтобы вписать в него название команды.</div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvasBoard');
+        const coordsList = document.getElementById('coordsList');
+        const logosLayer = document.createElement('div');
+        logosLayer.id = 'logosLayer';
+        logosLayer.style.cssText = 'position:absolute; inset:0; z-index:10; pointer-events:none;';
+        canvas.appendChild(logosLayer);
+        
+        const IMG_SRC_1 = 'https://res.cloudinary.com/dplmdnxvk/image/upload/v1794658258/w5mplrlvkecl77ia8fbq.png';
+        const IMG_SRC_2 = 'https://res.cloudinary.com/dplmdnxvk/image/upload/v1794662358/tzcyf4txvq00ggwk4soz.png'; 
+        const IMG_SRC_3 = 'https://res.cloudinary.com/dplmdnxvk/image/upload/v1794663822/qxugvm4od0mlhf7pzgkm.png';
+
+        // Базовые карточки
+        const BASE_CARDS = [
+            { id: 1,  x: -210, y: -100 },
+            { id: 5,  x: -210, y: -60 },
+            { id: 7,  x: -210, y: -20 },
+            { id: 8,  x: -210, y: 20 },
+            { id: 11, x: -210, y: 60 },
+            { id: 12, x: -210, y: 100 },
+            { id: 13, x: -210, y: 140 },
+            { id: 15, x: -210, y: 180 },
+            { id: 17, x: -120, y: 0 },
+            { id: 18, x: -120, y: -80 },
+            { id: 19, x: -120, y: -120 },
+            { id: 20, x: -120, y: -40 },
+            { id: 21, x: -120, y: 200 },
+            { id: 22, x: -120, y: 160 },
+            { id: 23, x: -120, y: 120 },
+            { id: 24, x: -120, y: 80 },
+            { id: 25, x: -31,  y: -140 },
+            { id: 26, x: -31,  y: -100 },
+            { id: 27, x: -31,  y: 220 },
+            { id: 28, x: -31,  y: 180 },
+            { id: 29, x: -31,  y: 100 },
+            { id: 30, x: -31,  y: 60 },
+            { id: 31, x: -31,  y: 20 },
+            { id: 32, x: -31,  y: -20 },
+            { id: 33, x: 60,   y: -78 },
+            { id: 34, x: 60,   y: -40 },
+            { id: 35, x: 60,   y: 0 },
+            { id: 36, x: 60,   y: 80 },
+            { id: 37, x: 60,   y: 120 },
+            { id: 38, x: 60,   y: 160 },
+            { id: 39, x: 150,  y: 40 },
+            { id: 40, x: 150,  y: 0 },
+            { id: 41, x: 150,  y: 80 }
+        ];
+
+        const DEFAULT_LAYERS = [];
+
+        BASE_CARDS.forEach(card => {
+            DEFAULT_LAYERS.push({ id: card.id, x: card.x, y: card.y, scale: 16, checked: true, src: IMG_SRC_1, type: 'card' });
+        });
+
+        DEFAULT_LAYERS.push(
+            { id: 47, x: 60,   y: 220,  scale: 16, checked: true, src: IMG_SRC_2, type: 'card' },
+            { id: 49, x: 150,  y: 220,  scale: 16, checked: true, src: IMG_SRC_2, type: 'card' },
+            { id: 50, x: 150,  y: 160,  scale: 16, checked: true, src: IMG_SRC_2, type: 'card' },
+            { id: 51, x: 60,   y: -120, scale: 16, checked: true, src: IMG_SRC_3, type: 'card' },
+            { id: 52, x: 150,  y: -120, scale: 16, checked: true, src: IMG_SRC_3, type: 'card' },
+            { id: 53, x: 150,  y: -60,  scale: 16, checked: true, src: IMG_SRC_3, type: 'card' }
+        );
+
+        let layers = [];
+        let nextId = 300;
+        let activeLayers = new Set();
+        let lastActive = null;
+        let isSettingsHiddenMode = false;
+        let selectedLogoLayer = null;
+
+        const MIN_USER_SCALE = 1;
+        const MAX_USER_SCALE = 1000;
+
+        // Массив логотипов на холсте
+        const logoItems = [];
+        BASE_CARDS.forEach((card, i) => {
+            logoItems.push({ id: `l1_${i}`, type: 'logo1', offsetX: card.x - 31, offsetY: card.y - 12, teamName: '', src: '' });
+            logoItems.push({ id: `l2_${i}`, type: 'logo2', offsetX: card.x - 31, offsetY: card.y - 12, teamName: '', src: '' });
+        });
+
+        // --- СКРЫТИЕ ГЛОБАЛЬНЫХ НАСТРОЕК ---
+        const toggleGlobalBtn = document.getElementById('toggleGlobalBtn');
+        const globalSettingsContainer = document.getElementById('globalSettingsContainer');
+
+        toggleGlobalBtn.addEventListener('click', () => {
+            globalSettingsContainer.classList.toggle('hidden');
+            if (globalSettingsContainer.classList.contains('hidden')) {
+                toggleGlobalBtn.textContent = 'Показать глобальные настройки';
+            } else {
+                toggleGlobalBtn.textContent = 'Скрыть глобальные настройки';
+            }
+        });
+
+        function applyTransform(layer) {
+            const finalScale = layer.baseFitScale * (layer.userScalePercent / 100);
+            layer.img.style.transform =
+                `translate(-50%, -50%) translate(${layer.offsetX}px, ${layer.offsetY}px) scale(${finalScale})`;
+        }
+
+        function updateInputs(layer) {
+            if (!layer.xInput) return;
+            layer.xInput.value = Math.round(layer.offsetX);
+            layer.yInput.value = Math.round(layer.offsetY);
+            layer.scaleInput.value = Math.round(layer.userScalePercent);
+            const finalScale = layer.baseFitScale * (layer.userScalePercent / 100);
+            const w = layer.img.naturalWidth * finalScale;
+            const h = layer.img.naturalHeight * finalScale;
+            layer.sizeEl.textContent = Math.round(w) + ' × ' + Math.round(h);
+        }
+
+        function refreshLayer(layer) {
+            applyTransform(layer);
+            updateInputs(layer);
+        }
+
+        function fitLayerToCanvas(layer) {
+            if (!layer.img.naturalWidth || !layer.img.naturalHeight) return;
+            const rect = canvas.getBoundingClientRect();
+            layer.baseFitScale = Math.min(rect.width / layer.img.naturalWidth, rect.height / layer.img.naturalHeight);
+            refreshLayer(layer);
+        }
+
+        function updateSelectionUI() {
+            layers.forEach(l => {
+                if (activeLayers.has(l)) {
+                    l.img.classList.add('selected');
+                    if (l.infoEl) l.infoEl.classList.add('selected');
+                } else {
+                    l.img.classList.remove('selected');
+                    if (l.infoEl) l.infoEl.classList.remove('selected');
+                }
+            });
+        }
+
+        function setSelection(layer, mode) {
+            if (mode === 'toggle') {
+                if (activeLayers.has(layer)) activeLayers.delete(layer);
+                else activeLayers.add(layer);
+            } else if (mode === 'add') {
+                activeLayers.add(layer);
+            } else {
+                activeLayers.clear();
+                activeLayers.add(layer);
+            }
+            if (activeLayers.has(layer)) lastActive = layer;
+            else if (lastActive && !activeLayers.has(lastActive)) {
+                lastActive = activeLayers.size ? [...activeLayers][activeLayers.size - 1] : null;
+            }
+            updateSelectionUI();
+        }
+
+        const hideCheckedBtn = document.getElementById('hideCheckedBtn');
+        
+        function toggleHideSettings() {
+            isSettingsHiddenMode = !isSettingsHiddenMode;
+            
+            if (isSettingsHiddenMode) {
+                hideCheckedBtn.textContent = 'Показать настройки';
+                hideCheckedBtn.classList.add('active');
+                layers.forEach(layer => {
+                    if (layer.visibleCheckbox && layer.visibleCheckbox.checked) {
+                        layer.infoEl.classList.add('hidden-settings');
+                    }
+                });
+            } else {
+                hideCheckedBtn.textContent = 'Скрыть настройки';
+                hideCheckedBtn.classList.remove('active');
+                layers.forEach(layer => {
+                    if (layer.infoEl) layer.infoEl.classList.remove('hidden-settings');
+                });
+            }
+        }
+
+        hideCheckedBtn.addEventListener('click', toggleHideSettings);
+
+        function createLayer(sourceLayer = null, preset = null) {
+            if (preset && preset.type && preset.type.startsWith('logo')) return null;
+
+            const id = preset ? preset.id : nextId++;
+            const imgSrc = preset ? preset.src : (sourceLayer ? sourceLayer.img.src : IMG_SRC_1);
+
+            const img = document.createElement('img');
+            img.className = 'layer';
+            img.src = imgSrc;
+            img.alt = '';
+            img.draggable = false;
+            canvas.appendChild(img);
+
+            const layer = {
+                id,
+                img,
+                type: 'card',
+                baseFitScale: 1,
+                userScalePercent: preset ? preset.scale : (sourceLayer ? sourceLayer.userScalePercent : 100),
+                offsetX: preset ? preset.x : (sourceLayer ? sourceLayer.offsetX : 0),
+                offsetY: preset ? preset.y : (sourceLayer ? sourceLayer.offsetY : 0),
+                infoEl: null,
+                xInput: null,
+                yInput: null,
+                scaleInput: null,
+                sizeEl: null,
+                visibleCheckbox: null
+            };
+
+            const infoEl = document.createElement('div');
+            infoEl.className = 'coords';
+            infoEl.innerHTML = `
+                <label class="visibility-toggle">
+                    <input type="checkbox" class="ivis" ${preset && preset.checked === false ? '' : 'checked'}>
+                </label>
+                <span class="title">Карточка ${id}</span>
+                <span><span class="label">X:</span><input type="number" class="ix" step="1" value="${layer.offsetX}"></span>
+                <span><span class="label">Y:</span><input type="number" class="iy" step="1" value="${layer.offsetY}"></span>
+                <span><span class="label">Масштаб, %:</span><input type="number" class="is" step="1" min="${MIN_USER_SCALE}" max="${MAX_USER_SCALE}" value="${layer.userScalePercent}"></span>
+                <span><span class="label">Размер:</span><span class="csz">0 × 0</span></span>
+                <button class="remove" title="Удалить">✕</button>
+            `;
+
+            layer.xInput = infoEl.querySelector('.ix');
+            layer.yInput = infoEl.querySelector('.iy');
+            layer.scaleInput = infoEl.querySelector('.is');
+            layer.sizeEl = infoEl.querySelector('.csz');
+            layer.visibleCheckbox = infoEl.querySelector('.ivis');
+
+            if (isSettingsHiddenMode && layer.visibleCheckbox.checked) {
+                infoEl.classList.add('hidden-settings');
+            }
+
+            layer.visibleCheckbox.addEventListener('change', (e) => {
+                if (isSettingsHiddenMode) {
+                    if (e.target.checked) infoEl.classList.add('hidden-settings');
+                    else infoEl.classList.remove('hidden-settings');
+                }
+            });
+
+            infoEl.querySelector('.remove').addEventListener('click', (e) => {
+                e.stopPropagation();
+                removeLayer(layer);
+            });
+
+            infoEl.addEventListener('click', (e) => {
+                if (e.target.tagName === 'INPUT' || e.target.classList.contains('remove') || e.target.closest('.visibility-toggle')) return;
+                let mode = 'replace';
+                if (e.ctrlKey || e.metaKey) mode = 'toggle';
+                else if (e.shiftKey) mode = 'add';
+                setSelection(layer, mode);
+            });
+
+            layer.xInput.addEventListener('input', () => {
+                const v = parseFloat(layer.xInput.value);
+                if (!isNaN(v)) {
+                    layer.offsetX = v;
+                    applyTransform(layer);
+                    updateInputs(layer);
+                    updateGlobalInputs();
+                }
+            });
+            layer.yInput.addEventListener('input', () => {
+                const v = parseFloat(layer.yInput.value);
+                if (!isNaN(v)) {
+                    layer.offsetY = v;
+                    applyTransform(layer);
+                    updateInputs(layer);
+                    updateGlobalInputs();
+                }
+            });
+            layer.scaleInput.addEventListener('input', () => {
+                let v = parseFloat(layer.scaleInput.value);
+                if (isNaN(v)) return;
+                v = Math.min(MAX_USER_SCALE, Math.max(MIN_USER_SCALE, v));
+                layer.userScalePercent = v;
+                applyTransform(layer);
+                updateInputs(layer);
+            });
+            layer.scaleInput.addEventListener('blur', () => {
+                layer.scaleInput.value = Math.round(layer.userScalePercent);
+            });
+
+            coordsList.appendChild(infoEl);
+            layer.infoEl = infoEl;
+
+            layers.push(layer);
+
+            if (img.complete) fitLayerToCanvas(layer);
+            else img.onload = () => fitLayerToCanvas(layer);
+
+            return layer;
+        }
+
+        function removeLayer(layer) {
+            layer.img.remove();
+            if (layer.infoEl) layer.infoEl.remove();
+            layers = layers.filter(l => l !== layer);
+            activeLayers.delete(layer);
+            if (lastActive === layer) {
+                lastActive = activeLayers.size ? [...activeLayers][activeLayers.size - 1] : (layers.length ? layers[layers.length - 1] : null);
+            }
+            updateSelectionUI();
+            updateGlobalInputs();
+        }
+
+        let isDragging = false;
+        let dragStartX = 0, dragStartY = 0;
+        let dragStartPositions = [];
+        let draggedLayer = null;
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;
+            
+            const logoItemEl = e.target.closest('.logo-item');
+            if (logoItemEl) {
+                e.stopPropagation();
+                selectLogo(logoItemEl.dataset.id);
+                return;
+            }
+
+            let targetLayer = null;
+            for (let i = layers.length - 1; i >= 0; i--) {
+                const r = layers[i].img.getBoundingClientRect();
+                if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
+                    targetLayer = layers[i];
+                    break;
+                }
+            }
+            if (!targetLayer) {
+                selectedLogoLayer = null;
+                document.getElementById('logoEditor').style.display = 'none';
+                return;
+            }
+
+            if (!activeLayers.has(targetLayer)) {
+                let mode = 'replace';
+                if (e.ctrlKey || e.metaKey) mode = 'toggle';
+                else if (e.shiftKey) mode = 'add';
+                setSelection(targetLayer, mode);
+            } else {
+                lastActive = targetLayer;
+            }
+
+            isDragging = true;
+            draggedLayer = targetLayer;
+            canvas.classList.add('dragging');
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            dragStartPositions = [...activeLayers].map(l => ({
+                layer: l,
+                offsetX: l.offsetX,
+                offsetY: l.offsetY
+            }));
+            e.preventDefault();
+        });
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - dragStartX;
+            const dy = e.clientY - dragStartY;
+            dragStartPositions.forEach(p => {
+                p.layer.offsetX = p.offsetX + dx;
+                p.layer.offsetY = p.offsetY + dy;
+                applyTransform(p.layer);
+                updateInputs(p.layer);
+            });
+            updateGlobalInputs();
+        });
+        window.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                draggedLayer = null;
+                canvas.classList.remove('dragging');
+            }
+        });
+
+        function centerAllLayers() {
+            if (layers.length === 0) return;
+
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+
+            layers.forEach(layer => {
+                const finalScale = layer.baseFitScale * (layer.userScalePercent / 100);
+                const w = (layer.img.naturalWidth || 100) * finalScale;
+                const h = (layer.img.naturalHeight || 100) * finalScale;
+                const left = layer.offsetX - w / 2;
+                const right = layer.offsetX + w / 2;
+                const top = layer.offsetY - h / 2;
+                const bottom = layer.offsetY + h / 2;
+                if (left < minX) minX = left;
+                if (right > maxX) maxX = right;
+                if (top < minY) minY = top;
+                if (bottom > maxY) maxY = bottom;
+            });
+
+            const groupCenterX = (minX + maxX) / 2;
+            const groupCenterY = (minY + maxY) / 2;
+
+            layers.forEach(layer => {
+                layer.offsetX -= groupCenterX;
+                layer.offsetY -= groupCenterY;
+                applyTransform(layer);
+                updateInputs(layer);
+            });
+            updateGlobalInputs();
+        }
+
+        document.getElementById('centerBtn').addEventListener('click', centerAllLayers);
+
+        const globalCardXInput = document.getElementById('globalCardX');
+        const globalCardYInput = document.getElementById('globalCardY');
+        const globalLogo1XInput = document.getElementById('globalLogo1X');
+        const globalLogo1YInput = document.getElementById('globalLogo1Y');
+        const globalLogo2XInput = document.getElementById('globalLogo2X');
+        const globalLogo2YInput = document.getElementById('globalLogo2Y');
+
+        function calculateCardsCenter() {
+            if (layers.length === 0) return { x: 0, y: 0 };
+            let sumX = 0, sumY = 0;
+            layers.forEach(layer => { sumX += layer.offsetX; sumY += layer.offsetY; });
+            return { x: Math.round(sumX / layers.length), y: Math.round(sumY / layers.length) };
+        }
+
+        function calculateLogosCenter(type) {
+            const group = logoItems.filter(l => l.type === type);
+            if (group.length === 0) return { x: 0, y: 0 };
+            let sumX = 0, sumY = 0;
+            group.forEach(l => { sumX += l.offsetX; sumY += l.offsetY; });
+            return { x: Math.round(sumX / group.length), y: Math.round(sumY / group.length) };
+        }
+
+        function updateGlobalInputs() {
+            const cardCenter = calculateCardsCenter();
+            if (document.activeElement !== globalCardXInput) globalCardXInput.value = cardCenter.x;
+            if (document.activeElement !== globalCardYInput) globalCardYInput.value = cardCenter.y;
+
+            const logo1Center = calculateLogosCenter('logo1');
+            if (document.activeElement !== globalLogo1XInput) globalLogo1XInput.value = logo1Center.x;
+            if (document.activeElement !== globalLogo1YInput) globalLogo1YInput.value = logo1Center.y;
+
+            const logo2Center = calculateLogosCenter('logo2');
+            if (document.activeElement !== globalLogo2XInput) globalLogo2XInput.value = logo2Center.x;
+            if (document.activeElement !== globalLogo2YInput) globalLogo2YInput.value = logo2Center.y;
+        }
+
+        globalCardXInput.addEventListener('input', (e) => {
+            const newVal = parseFloat(e.target.value);
+            if (isNaN(newVal)) return;
+            const current = calculateCardsCenter();
+            const diff = newVal - current.x;
+            layers.forEach(layer => { layer.offsetX += diff; applyTransform(layer); updateInputs(layer); });
+        });
+        globalCardYInput.addEventListener('input', (e) => {
+            const newVal = parseFloat(e.target.value);
+            if (isNaN(newVal)) return;
+            const current = calculateCardsCenter();
+            const diff = newVal - current.y;
+            layers.forEach(layer => { layer.offsetY += diff; applyTransform(layer); updateInputs(layer); });
+        });
+
+        globalLogo1XInput.addEventListener('input', (e) => {
+            const newVal = parseFloat(e.target.value);
+            if (isNaN(newVal)) return;
+            const current = calculateLogosCenter('logo1');
+            const diff = newVal - current.x;
+            logoItems.filter(l => l.type === 'logo1').forEach(l => { l.offsetX += diff; });
+            renderLogos();
+        });
+        globalLogo1YInput.addEventListener('input', (e) => {
+            const newVal = parseFloat(e.target.value);
+            if (isNaN(newVal)) return;
+            const current = calculateLogosCenter('logo1');
+            const diff = newVal - current.y;
+            logoItems.filter(l => l.type === 'logo1').forEach(l => { l.offsetY += diff; });
+            renderLogos();
+        });
+
+        globalLogo2XInput.addEventListener('input', (e) => {
+            const newVal = parseFloat(e.target.value);
+            if (isNaN(newVal)) return;
+            const current = calculateLogosCenter('logo2');
+            const diff = newVal - current.x;
+            logoItems.filter(l => l.type === 'logo2').forEach(l => { l.offsetX += diff; });
+            renderLogos();
+        });
+        globalLogo2YInput.addEventListener('input', (e) => {
+            const newVal = parseFloat(e.target.value);
+            if (isNaN(newVal)) return;
+            const current = calculateLogosCenter('logo2');
+            const diff = newVal - current.y;
+            logoItems.filter(l => l.type === 'logo2').forEach(l => { l.offsetY += diff; });
+            renderLogos();
+        });
+
+        const API_URL = "https://script.google.com/macros/s/AKfycbxJZEfppSo6QZpmpiEDR1FaOpIjHdfQDXdj-x80uoIy-SU30nKgIgfvr3DNgQbroi53/exec";
+        const SHEET_ID = "188jMHUJs1KkmCAzG7XZYTnTY9SnNIx0JlXJoEdMTees";
+        const state = { teams: new Map() };
+
+        async function fetchSheet(sheetName) {
+            const url = new URL(API_URL);
+            url.searchParams.set("sheetId", SHEET_ID);
+            url.searchParams.set("sheetName", sheetName);
+            const res = await fetch(url);
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error || "Ошибка API");
+            return json.data;
+        }
+
+        async function loadTeams() {
+            try {
+                const data = await fetchSheet("TEAMS");
+                state.teams.clear();
+                data.slice(1).forEach(row => {
+                    const fullName = row[0] ? String(row[0]).trim() : "";
+                    const logo = row[4] ? String(row[4]).trim() : "";
+                    if (fullName) {
+                        state.teams.set(fullName.toLowerCase(), { fullName, logo });
+                    }
+                });
+                fillDatalist();
+            } catch (e) {
+                console.error("Ошибка загрузки TEAMS:", e);
+            }
+        }
+
+        function fillDatalist() {
+            const names = Array.from(state.teams.values()).map(t => t.fullName).sort((a, b) => a.localeCompare(b));
+            document.getElementById('teamList').innerHTML = names.map(n => `<option value="${n.replace(/"/g, '&quot;')}"></option>`).join('');
+        }
+
+        const logoEditor = document.getElementById('logoEditor');
+        const teamInput = document.getElementById('teamInput');
+        const statusLogo = document.getElementById('statusLogo');
+
+        function renderLogos() {
+            logosLayer.innerHTML = '';
+            logoItems.forEach(logo => {
+                const div = document.createElement('div');
+                div.className = 'logo-item';
+                div.dataset.id = logo.id;
+                
+                const leftPct = 50 + (logo.offsetX / (canvas.clientWidth / 2)) * 50;
+                const topPct = 50 + (logo.offsetY / (canvas.clientHeight / 2)) * 50;
+                
+                div.style.position = 'absolute';
+                div.style.left = leftPct + '%';
+                div.style.top = topPct + '%';
+                div.style.width = '26px';
+                div.style.height = '26px';
+                div.style.transform = 'translate(-50%, -50%)';
+                div.style.pointerEvents = 'auto';
+                div.style.cursor = 'pointer';
+                div.style.borderRadius = '4px';
+                div.style.backgroundSize = 'contain';
+                div.style.backgroundPosition = 'center';
+                div.style.backgroundRepeat = 'no-repeat';
+                
+                if (logo.src) {
+                    div.style.backgroundImage = `url('${logo.src}')`;
+                } else {
+                    div.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                }
+
+                if (selectedLogoLayer && selectedLogoLayer.id === logo.id) {
+                    div.style.outline = '2px solid #fff';
+                }
+
+                div.addEventListener('mouseenter', () => { div.style.outline = '1px solid rgba(255,255,255,0.7)'; });
+                div.addEventListener('mouseleave', () => { 
+                    if (!selectedLogoLayer || selectedLogoLayer.id !== logo.id) div.style.outline = 'none'; 
+                });
+
+                logosLayer.appendChild(div);
+            });
+        }
+
+        function selectLogo(id) {
+            selectedLogoLayer = logoItems.find(l => l.id === id);
+            if (!selectedLogoLayer) return;
+            
+            logoEditor.style.display = 'flex';
+            teamInput.value = selectedLogoLayer.teamName || '';
+            statusLogo.textContent = selectedLogoLayer.src ? '✓ Логотип установлен' : '';
+            statusLogo.style.color = selectedLogoLayer.src ? '#28a745' : '';
+            renderLogos();
+        }
+
+        teamInput.addEventListener('input', () => {
+            if (!selectedLogoLayer) return;
+            const value = teamInput.value.trim();
+            selectedLogoLayer.teamName = value;
+            
+            if (!value) {
+                selectedLogoLayer.src = '';
+                statusLogo.textContent = '';
+                renderLogos();
+                return;
+            }
+
+            const team = state.teams.get(value.toLowerCase());
+            if (team && team.logo) {
+                selectedLogoLayer.src = team.logo;
+                statusLogo.textContent = `✓ ${team.fullName}`;
+                statusLogo.style.color = '#28a745';
+            } else {
+                selectedLogoLayer.src = '';
+                statusLogo.textContent = `Команда не найдена или нет лого`;
+                statusLogo.style.color = '#dc3545';
+            }
+            renderLogos();
+        });
+
+        canvas.addEventListener('click', (e) => {
+            if (e.target === canvas || e.target.id === 'logosLayer') {
+                selectedLogoLayer = null;
+                logoEditor.style.display = 'none';
+                renderLogos();
+            }
+        });
+
+        function initDefaultLayers() {
+            DEFAULT_LAYERS.forEach(preset => {
+                createLayer(null, preset);
+            });
+
+            renderLogos();
+
+            let loadedCount = 0;
+            const checkAllLoaded = () => {
+                loadedCount++;
+                if (loadedCount === layers.length) {
+                    centerAllLayers();
+                    
+                    setTimeout(() => {
+                        globalCardXInput.value = -3;
+                        globalCardXInput.dispatchEvent(new Event('input'));
+                        globalCardYInput.value = 2;
+                        globalCardYInput.dispatchEvent(new Event('input'));
+
+                        globalLogo1XInput.value = -6;
+                        globalLogo1XInput.dispatchEvent(new Event('input'));
+                        globalLogo1YInput.value = 0;
+                        globalLogo1YInput.dispatchEvent(new Event('input'));
+
+                        globalLogo2XInput.value = -58;
+                        globalLogo2XInput.dispatchEvent(new Event('input'));
+                        globalLogo2YInput.value = 0;
+                        globalLogo2YInput.dispatchEvent(new Event('input'));
+                    }, 50);
+                }
+            };
+            
+            layers.forEach(layer => {
+                if (layer.img.complete) checkAllLoaded();
+                else layer.img.addEventListener('load', checkAllLoaded);
+            });
+        }
+
+        loadTeams().then(() => {
+            initDefaultLayers();
+        });
+        
+        setTimeout(() => {
+            if (!isSettingsHiddenMode) toggleHideSettings();
+        }, 100);
+    </script>
+</body>
+</html>
