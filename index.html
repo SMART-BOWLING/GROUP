@@ -41,7 +41,7 @@
         }
         .canvas.dragging { cursor: grabbing; }
 
-        /* ЕДИНЫЙ КОНТЕЙНЕР ДЛЯ ВСЕГО (КАРТОЧЕК И ЛОГОТИПОВ) */
+        /* ЕДИНЫЙ КОНТЕЙНЕР (жестко 0x0 в центре) */
         .board-content {
             position: absolute;
             top: 50%;
@@ -63,10 +63,7 @@
             pointer-events: none;
             max-width: none;
             max-height: none;
-            /* Центрируем карточку относительно её координат */
-            margin-left: -50%; 
-            margin-top: -50%;
-            /* Но так как мы не знаем точный размер до загрузки, используем transform в JS */
+            /* ВАЖНО: убираем марджины, центрируем только через transform в JS */
         }
         .canvas .layer.selected {
             outline: 2px dashed rgba(255, 255, 255, 0.9);
@@ -445,7 +442,6 @@
 
         function applyTransform(layer) {
             const finalScale = layer.baseFitScale * (layer.userScalePercent / 100);
-            // Центрируем картинку и применяем смещение
             layer.img.style.transform = 
                 `translate(-50%, -50%) translate(${layer.offsetX}px, ${layer.offsetY}px) scale(${finalScale})`;
         }
@@ -469,6 +465,7 @@
         function fitLayerToCanvas(layer) {
             if (!layer.img.naturalWidth || !layer.img.naturalHeight) return;
             const rect = canvas.getBoundingClientRect();
+            // Строго считаем масштаб от размеров контейнера
             layer.baseFitScale = Math.min(rect.width / layer.img.naturalWidth, rect.height / layer.img.naturalHeight);
             refreshLayer(layer);
         }
@@ -537,7 +534,6 @@
             img.src = imgSrc;
             img.alt = '';
             img.draggable = false;
-            // Убираем принудительные проценты из CSS, так как центрируем через transform в JS
             img.style.top = '0';
             img.style.left = '0';
             boardContent.appendChild(img);
