@@ -339,14 +339,14 @@
 
                 <div class="global-settings global-logos-1">
                     <span class="title">Лого 1 (Глобально)</span>
-                    <span><span class="label">X:</span><input type="number" id="globalLogo1X" step="1" value="-6" inputmode="decimal"></span>
-                    <span><span class="label">Y:</span><input type="number" id="globalLogo1Y" step="1" value="0" inputmode="decimal"></span>
+                    <span><span class="label">X:</span><input type="number" id="globalLogo1X" step="1" value="-31" inputmode="decimal"></span>
+                    <span><span class="label">Y:</span><input type="number" id="globalLogo1Y" step="1" value="-12" inputmode="decimal"></span>
                 </div>
 
                 <div class="global-settings global-logos-2">
                     <span class="title">Лого 2 (Глобально)</span>
-                    <span><span class="label">X:</span><input type="number" id="globalLogo2X" step="1" value="-58" inputmode="decimal"></span>
-                    <span><span class="label">Y:</span><input type="number" id="globalLogo2Y" step="1" value="0" inputmode="decimal"></span>
+                    <span><span class="label">X:</span><input type="number" id="globalLogo2X" step="1" value="-31" inputmode="decimal"></span>
+                    <span><span class="label">Y:</span><input type="number" id="globalLogo2Y" step="1" value="-12" inputmode="decimal"></span>
                 </div>
             </div>
 
@@ -441,16 +441,31 @@
         const MIN_USER_SCALE = 1;
         const MAX_USER_SCALE = 1000;
 
-        // ЭТАЛОННАЯ ШИРИНА ХОЛСТА — под неё настроены координаты BASE_CARDS.
         const REFERENCE_CANVAS_SIZE = 521;
-
-        // Отступ группы карточек от краёв холста (доля от размера холста)
         const CANVAS_PADDING_RATIO = 0.05;
 
+        // Логотипы привязаны к карточкам через cardId.
+        // localDX/localDY — смещение логотипа ВНУТРИ карточки (в тех же координатах, что BASE_CARDS).
         const logoItems = [];
         BASE_CARDS.forEach((card, i) => {
-            logoItems.push({ id: `l1_${i}`, type: 'logo1', offsetX: card.x - 31, offsetY: card.y - 12, teamName: '', src: '' });
-            logoItems.push({ id: `l2_${i}`, type: 'logo2', offsetX: card.x - 31, offsetY: card.y - 12, teamName: '', src: '' });
+            logoItems.push({
+                id: `l1_${i}`,
+                type: 'logo1',
+                cardId: card.id,
+                localDX: -31,
+                localDY: -12,
+                teamName: '',
+                src: ''
+            });
+            logoItems.push({
+                id: `l2_${i}`,
+                type: 'logo2',
+                cardId: card.id,
+                localDX: -31,
+                localDY: -12,
+                teamName: '',
+                src: ''
+            });
         });
 
         const toggleGlobalBtn = document.getElementById('toggleGlobalBtn');
@@ -633,6 +648,7 @@
                     applyTransform(layer);
                     updateInputs(layer);
                     updateGlobalInputs();
+                    renderLogos();
                 }
             });
             layer.yInput.addEventListener('input', () => {
@@ -642,6 +658,7 @@
                     applyTransform(layer);
                     updateInputs(layer);
                     updateGlobalInputs();
+                    renderLogos();
                 }
             });
             layer.scaleInput.addEventListener('input', () => {
@@ -651,6 +668,7 @@
                 layer.userScalePercent = v;
                 applyTransform(layer);
                 updateInputs(layer);
+                renderLogos();
             });
             layer.scaleInput.addEventListener('blur', () => {
                 layer.scaleInput.value = Math.round(layer.userScalePercent);
@@ -670,6 +688,10 @@
         function removeLayer(layer) {
             layer.img.remove();
             if (layer.infoEl) layer.infoEl.remove();
+            // Удаляем и привязанные логотипы
+            for (let i = logoItems.length - 1; i >= 0; i--) {
+                if (logoItems[i].cardId === layer.id) logoItems.splice(i, 1);
+            }
             layers = layers.filter(l => l !== layer);
             activeLayers.delete(layer);
             if (lastActive === layer) {
@@ -677,6 +699,7 @@
             }
             updateSelectionUI();
             updateGlobalInputs();
+            renderLogos();
         }
 
         let isDragging = false;
@@ -752,6 +775,7 @@
                 updateInputs(p.layer);
             });
             updateGlobalInputs();
+            renderLogos();
             if (e.cancelable) e.preventDefault();
         }
 
@@ -802,9 +826,9 @@
                 updateInputs(layer);
             });
             updateGlobalInputs();
+            renderLogos();
         }
 
-        // ===== ВПИСЫВАНИЕ ВСЕЙ ГРУППЫ КАРТОЧЕК В ХОЛСТ С ОТСТУПОМ =====
         function fitGroupToCanvas() {
             if (layers.length === 0) return;
 
@@ -856,6 +880,7 @@
         document.getElementById('centerBtn').addEventListener('click', () => {
             centerAllLayers();
             fitGroupToCanvas();
+            renderLogos();
         });
 
         const globalCardXInput = document.getElementById('globalCardX');
@@ -876,7 +901,7 @@
             const group = logoItems.filter(l => l.type === type);
             if (group.length === 0) return { x: 0, y: 0 };
             let sumX = 0, sumY = 0;
-            group.forEach(l => { sumX += l.offsetX; sumY += l.offsetY; });
+            group.forEach(l => { sumX += l.localDX; sumY += l.localDY; });
             return { x: Math.round(sumX / group.length), y: Math.round(sumY / group.length) };
         }
 
@@ -900,6 +925,7 @@
             const current = calculateCardsCenter();
             const diff = newVal - current.x;
             layers.forEach(layer => { layer.offsetX += diff; applyTransform(layer); updateInputs(layer); });
+            renderLogos();
         });
         globalCardYInput.addEventListener('input', (e) => {
             const newVal = parseFloat(e.target.value);
@@ -907,39 +933,56 @@
             const current = calculateCardsCenter();
             const diff = newVal - current.y;
             layers.forEach(layer => { layer.offsetY += diff; applyTransform(layer); updateInputs(layer); });
+            renderLogos();
         });
 
         globalLogo1XInput.addEventListener('input', (e) => {
             const newVal = parseFloat(e.target.value);
             if (isNaN(newVal)) return;
-            const current = calculateLogosCenter('logo1');
-            const diff = newVal - current.x;
-            logoItems.filter(l => l.type === 'logo1').forEach(l => { l.offsetX += diff; });
+            const group = logoItems.filter(l => l.type === 'logo1');
+            if (group.length === 0) return;
+            let sum = 0;
+            group.forEach(l => sum += l.localDX);
+            const currentAvg = sum / group.length;
+            const diff = newVal - currentAvg;
+            group.forEach(l => { l.localDX += diff; });
             renderLogos();
         });
         globalLogo1YInput.addEventListener('input', (e) => {
             const newVal = parseFloat(e.target.value);
             if (isNaN(newVal)) return;
-            const current = calculateLogosCenter('logo1');
-            const diff = newVal - current.y;
-            logoItems.filter(l => l.type === 'logo1').forEach(l => { l.offsetY += diff; });
+            const group = logoItems.filter(l => l.type === 'logo1');
+            if (group.length === 0) return;
+            let sum = 0;
+            group.forEach(l => sum += l.localDY);
+            const currentAvg = sum / group.length;
+            const diff = newVal - currentAvg;
+            group.forEach(l => { l.localDY += diff; });
             renderLogos();
         });
 
         globalLogo2XInput.addEventListener('input', (e) => {
             const newVal = parseFloat(e.target.value);
             if (isNaN(newVal)) return;
-            const current = calculateLogosCenter('logo2');
-            const diff = newVal - current.x;
-            logoItems.filter(l => l.type === 'logo2').forEach(l => { l.offsetX += diff; });
+            const group = logoItems.filter(l => l.type === 'logo2');
+            if (group.length === 0) return;
+            let sum = 0;
+            group.forEach(l => sum += l.localDX);
+            const currentAvg = sum / group.length;
+            const diff = newVal - currentAvg;
+            group.forEach(l => { l.localDX += diff; });
             renderLogos();
         });
         globalLogo2YInput.addEventListener('input', (e) => {
             const newVal = parseFloat(e.target.value);
             if (isNaN(newVal)) return;
-            const current = calculateLogosCenter('logo2');
-            const diff = newVal - current.y;
-            logoItems.filter(l => l.type === 'logo2').forEach(l => { l.offsetY += diff; });
+            const group = logoItems.filter(l => l.type === 'logo2');
+            if (group.length === 0) return;
+            let sum = 0;
+            group.forEach(l => sum += l.localDY);
+            const currentAvg = sum / group.length;
+            const diff = newVal - currentAvg;
+            group.forEach(l => { l.localDY += diff; });
             renderLogos();
         });
 
@@ -991,13 +1034,23 @@
         function renderLogos() {
             logosLayer.innerHTML = '';
             const size = getLogoSize();
+            const cw = canvas.clientWidth || 1;
+            const ch = canvas.clientHeight || 1;
+
             logoItems.forEach(logo => {
+                const card = layers.find(l => l.id === logo.cardId);
+                if (!card) return;
+
+                const cardScale = card.userScalePercent / 100;
+                const posX = card.offsetX + logo.localDX * cardScale;
+                const posY = card.offsetY + logo.localDY * cardScale;
+
+                const leftPct = 50 + (posX / (cw / 2)) * 50;
+                const topPct = 50 + (posY / (ch / 2)) * 50;
+
                 const div = document.createElement('div');
                 div.className = 'logo-item';
                 div.dataset.id = logo.id;
-
-                const leftPct = 50 + (logo.offsetX / (canvas.clientWidth / 2)) * 50;
-                const topPct = 50 + (logo.offsetY / (canvas.clientHeight / 2)) * 50;
 
                 div.style.position = 'absolute';
                 div.style.left = leftPct + '%';
@@ -1093,23 +1146,7 @@
                             renderLogos();
                             centerAllLayers();
                             fitGroupToCanvas();
-
-                            setTimeout(() => {
-                                globalCardXInput.value = -3;
-                                globalCardXInput.dispatchEvent(new Event('input'));
-                                globalCardYInput.value = 2;
-                                globalCardYInput.dispatchEvent(new Event('input'));
-
-                                globalLogo1XInput.value = -6;
-                                globalLogo1XInput.dispatchEvent(new Event('input'));
-                                globalLogo1YInput.value = 0;
-                                globalLogo1YInput.dispatchEvent(new Event('input'));
-
-                                globalLogo2XInput.value = -58;
-                                globalLogo2XInput.dispatchEvent(new Event('input'));
-                                globalLogo2YInput.value = 0;
-                                globalLogo2YInput.dispatchEvent(new Event('input'));
-                            }, 50);
+                            renderLogos();
                         });
                     });
                 }
@@ -1131,8 +1168,8 @@
                 if (w === 0 || w === lastCanvasWidth) continue;
                 lastCanvasWidth = w;
                 layers.forEach(l => fitLayerToCanvas(l));
-                renderLogos();
                 fitGroupToCanvas();
+                renderLogos();
             }
         });
         ro.observe(canvas);
@@ -1140,8 +1177,8 @@
         window.addEventListener('orientationchange', () => {
             setTimeout(() => {
                 layers.forEach(l => fitLayerToCanvas(l));
-                renderLogos();
                 fitGroupToCanvas();
+                renderLogos();
             }, 350);
         });
 
