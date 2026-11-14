@@ -442,6 +442,11 @@
         const MIN_USER_SCALE = 1;
         const MAX_USER_SCALE = 1000;
 
+        // ЭТАЛОННАЯ ШИРИНА ХОЛСТА — под неё настроены координаты BASE_CARDS.
+        // Если при открытии карточки всё равно кажутся слишком большими/маленькими,
+        // поменяй это значение на фактическую ширину холста, при которой всё идеально.
+        const REFERENCE_CANVAS_SIZE = 521;
+
         const logoItems = [];
         BASE_CARDS.forEach((card, i) => {
             logoItems.push({ id: `l1_${i}`, type: 'logo1', offsetX: card.x - 31, offsetY: card.y - 12, teamName: '', src: '' });
@@ -482,10 +487,20 @@
             updateInputs(layer);
         }
 
+        // КЛЮЧЕВАЯ ФУНКЦИЯ: масштаб считается относительно ЭТАЛОНА (REFERENCE_CANVAS_SIZE),
+        // а затем умножается на отношение реальной ширины холста к эталону.
+        // Это гарантирует, что карточки занимают одинаковую долю холста при любом размере экрана,
+        // и не «прыгают» при зуме страницы (потому что layout-размер холста при зуме не меняется).
         function fitLayerToCanvas(layer) {
             if (!layer.img.naturalWidth || !layer.img.naturalHeight) return;
             const rect = canvas.getBoundingClientRect();
-            layer.baseFitScale = Math.min(rect.width / layer.img.naturalWidth, rect.height / layer.img.naturalHeight);
+            if (rect.width === 0) return;
+            const referenceScale = Math.min(
+                REFERENCE_CANVAS_SIZE / layer.img.naturalWidth,
+                REFERENCE_CANVAS_SIZE / layer.img.naturalHeight
+            );
+            const canvasRatio = rect.width / REFERENCE_CANVAS_SIZE;
+            layer.baseFitScale = referenceScale * canvasRatio;
             refreshLayer(layer);
         }
 
@@ -650,7 +665,7 @@
 
             layers.push(layer);
 
-            if (img.complete) fitLayerToCanvas(layer);
+            if (img.complete && img.naturalWidth) fitLayerToCanvas(layer);
             else img.onload = () => fitLayerToCanvas(layer);
 
             return layer;
@@ -1012,6 +1027,7 @@
             }
         });
 
+        // ===== ИНИЦИАЛИЗАЦИЯ С ОЖИДАНИЕМ LAYOUT =====
         function initDefaultLayers() {
             DEFAULT_LAYERS.forEach(preset => {
                 createLayer(null, preset);
@@ -1020,35 +1036,68 @@
             renderLogos();
 
             let loadedCount = 0;
+            const total = layers.length;
             const checkAllLoaded = () => {
                 loadedCount++;
-                if (loadedCount === layers.length) {
-                    centerAllLayers();
+                if (loadedCount === total) {
+                    // Ждём два кадра, чтобы Safari успел применить финальный layout
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            layers.forEach(l => fitLayerToCanvas(l));
+                            renderLogos();
+                            centerAllLayers();
 
-                    setTimeout(() => {
-                        globalCardXInput.value = -3;
-                        globalCardXInput.dispatchEvent(new Event('input'));
-                        globalCardYInput.value = 2;
-                        globalCardYInput.dispatchEvent(new Event('input'));
+                            setTimeout(() => {
+                                globalCardXInput.value = -3;
+                                globalCardXInput.dispatchEvent(new Event('input'));
+                                globalCardYInput.value = 2;
+                                globalCardYInput.dispatchEvent(new Event('input'));
 
-                        globalLogo1XInput.value = -6;
-                        globalLogo1XInput.dispatchEvent(new Event('input'));
-                        globalLogo1YInput.value = 0;
-                        globalLogo1YInput.dispatchEvent(new Event('input'));
+                                globalLogo1XInput.value = -6;
+                                globalLogo1XInput.dispatchEvent(new Event('input'));
+                                globalLogo1YInput.value = 0;
+                                globalLogo1YInput.dispatchEvent(new Event('input'));
 
-                        globalLogo2XInput.value = -58;
-                        globalLogo2XInput.dispatchEvent(new Event('input'));
-                        globalLogo2YInput.value = 0;
-                        globalLogo2YInput.dispatchEvent(new Event('input'));
-                    }, 50);
+                                globalLogo2XInput.value = -58;
+                                globalLogo2XInput.dispatchEvent(new Event('input'));
+                                globalLogo2YInput.value = 0;
+                                globalLogo2YInput.dispatchEvent(new Event('input'));
+                            }, 50);
+                        });
+                    });
                 }
             };
 
             layers.forEach(layer => {
-                if (layer.img.complete) checkAllLoaded();
-                else layer.img.addEventListener('load', checkAllLoaded);
+                if (layer.img.complete && layer.img.naturalWidth) checkAllLoaded();
+                else {
+                    layer.img.addEventListener('load', checkAllLoaded, { once: true });
+                    layer.img.addEventListener('error', checkAllLoaded, { once: true });
+                }
             });
         }
+
+        // ===== ResizeObserver — реагирует ТОЛЬКО на реальное изменение размера холста =====
+        // При pinch-zoom страницы layout-размер холста не меняется, поэтому карточки не «прыгают».
+        let lastCanvasWidth = 0;
+        const ro = new ResizeObserver(entries => {
+            for (const entry of entries) {
+                const w = Math.round(entry.contentRect.width);
+                if (w === 0 || w === lastCanvasWidth) continue;
+                lastCanvasWidth = w;
+                layers.forEach(l => fitLayerToCanvas(l));
+                renderLogos();
+            }
+        });
+        ro.observe(canvas);
+
+        // Поворот экрана — пересчёт после стабилизации layout
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                layers.forEach(l => fitLayerToCanvas(l));
+                renderLogos();
+            }, 350);
+        });
 
         loadTeams().then(() => {
             initDefaultLayers();
@@ -1057,22 +1106,6 @@
         setTimeout(() => {
             if (!isSettingsHiddenMode) toggleHideSettings();
         }, 100);
-
-        let resizeTimer;
-        window.addEventListener('resize', () => {
-            clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(() => {
-                layers.forEach(l => fitLayerToCanvas(l));
-                renderLogos();
-            }, 120);
-        });
-
-        window.addEventListener('orientationchange', () => {
-            setTimeout(() => {
-                layers.forEach(l => fitLayerToCanvas(l));
-                renderLogos();
-            }, 300);
-        });
     </script>
 </body>
 </html>
