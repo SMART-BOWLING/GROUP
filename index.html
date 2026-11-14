@@ -35,27 +35,29 @@
             overflow: hidden;
             touch-action: none;
             cursor: grab;
+            /* Устанавливаем центр для абсолютного позиционирования */
             display: flex;
             align-items: center;
             justify-content: center;
         }
         .canvas.dragging { cursor: grabbing; }
 
-        /* ЕДИНЫЙ КОНТЕЙНЕР (жестко 0x0 в центре) */
-        .board-content {
+        /* ВИРТУАЛЬНЫЙ ХОЛСТ 1000x1000 (он всегда одного размера, а CSS его зумит) */
+        .virtual-canvas {
             position: absolute;
+            width: 1000px;
+            height: 1000px;
             top: 50%;
             left: 50%;
-            width: 0;
-            height: 0;
             transform-origin: center center;
+            /* Начальный масштаб задается через JS, но по умолчанию скрыт */
         }
 
         /* Карточки */
         .canvas .layer {
             position: absolute;
-            top: 0;
-            left: 0;
+            top: 50%;
+            left: 50%;
             transform-origin: center center;
             will-change: transform;
             user-select: none;
@@ -63,7 +65,6 @@
             pointer-events: none;
             max-width: none;
             max-height: none;
-            /* ВАЖНО: убираем марджины, центрируем только через transform в JS */
         }
         .canvas .layer.selected {
             outline: 2px dashed rgba(255, 255, 255, 0.9);
@@ -308,7 +309,8 @@
 
     <div class="stage">
         <div class="canvas" id="canvasBoard">
-            <div class="board-content" id="boardContent"></div>
+            <!-- Виртуальный холст, где всё лежит -->
+            <div class="virtual-canvas" id="virtualCanvas"></div>
         </div>
 
         <div class="settings-panel">
@@ -354,7 +356,7 @@
 
     <script>
         const canvas = document.getElementById('canvasBoard');
-        const boardContent = document.getElementById('boardContent');
+        const virtualCanvas = document.getElementById('virtualCanvas');
         const coordsList = document.getElementById('coordsList');
         
         const IMG_SRC_1 = 'https://res.cloudinary.com/dplmdnxvk/image/upload/v1794658258/w5mplrlvkecl77ia8fbq.png';
@@ -440,8 +442,18 @@
             }
         });
 
+        // Функция пересчета масштаба виртуального холста
+        function updateVirtualScale() {
+            const rect = canvas.getBoundingClientRect();
+            const scale = rect.width / 1000; // Виртуальный холст 1000px, реальный = ширина экрана
+            virtualCanvas.style.transform = `translate(-50%, -50%) scale(${scale})`;
+        }
+        window.addEventListener('resize', updateVirtualScale);
+        updateVirtualScale();
+
         function applyTransform(layer) {
             const finalScale = layer.baseFitScale * (layer.userScalePercent / 100);
+            // Центрируем и позиционируем карточку
             layer.img.style.transform = 
                 `translate(-50%, -50%) translate(${layer.offsetX}px, ${layer.offsetY}px) scale(${finalScale})`;
         }
@@ -464,9 +476,9 @@
 
         function fitLayerToCanvas(layer) {
             if (!layer.img.naturalWidth || !layer.img.naturalHeight) return;
-            const rect = canvas.getBoundingClientRect();
-            // Строго считаем масштаб от размеров контейнера
-            layer.baseFitScale = Math.min(rect.width / layer.img.naturalWidth, rect.height / layer.img.naturalHeight);
+            // Базовый масштаб считаем относительно ВИРТУАЛЬНОГО холста (1000x1000)
+            // и уменьшаем на 2, чтобы карточки не были гигантскими
+            layer.baseFitScale = Math.min(1000 / layer.img.naturalWidth, 1000 / layer.img.naturalHeight);
             refreshLayer(layer);
         }
 
@@ -534,9 +546,7 @@
             img.src = imgSrc;
             img.alt = '';
             img.draggable = false;
-            img.style.top = '0';
-            img.style.left = '0';
-            boardContent.appendChild(img);
+            virtualCanvas.appendChild(img);
 
             const layer = {
                 id,
@@ -651,6 +661,7 @@
             updateGlobalInputs();
         }
 
+        // --- ПЕРЕТАСКИВАНИЕ (учет масштаба виртуального холста) ---
         let isDragging = false;
         let dragStartX = 0, dragStartY = 0;
         let dragStartPositions = [];
@@ -703,8 +714,13 @@
         });
         window.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
-            const dx = e.clientX - dragStartX;
-            const dy = e.clientY - dragStartY;
+            
+            // Учитываем масштаб при перетаскивании
+            const rect = canvas.getBoundingClientRect();
+            const scale = rect.width / 1000;
+            const dx = (e.clientX - dragStartX) / scale;
+            const dy = (e.clientY - dragStartY) / scale;
+            
             dragStartPositions.forEach(p => {
                 p.layer.offsetX = p.offsetX + dx;
                 p.layer.offsetY = p.offsetY + dy;
@@ -881,7 +897,7 @@
         const statusLogo = document.getElementById('statusLogo');
 
         function renderLogos() {
-            const oldItems = boardContent.querySelectorAll('.logo-item');
+            const oldItems = virtualCanvas.querySelectorAll('.logo-item');
             oldItems.forEach(el => el.remove());
 
             logoItems.forEach(logo => {
@@ -907,7 +923,7 @@
                     if (!selectedLogoLayer || selectedLogoLayer.id !== logo.id) div.style.outline = 'none'; 
                 });
 
-                boardContent.appendChild(div);
+                virtualCanvas.appendChild(div);
             });
         }
 
@@ -948,7 +964,7 @@
         });
 
         canvas.addEventListener('click', (e) => {
-            if (e.target === canvas || e.target === boardContent) {
+            if (e.target === canvas || e.target === virtualCanvas) {
                 selectedLogoLayer = null;
                 logoEditor.style.display = 'none';
                 renderLogos();
