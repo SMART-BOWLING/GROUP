@@ -2,38 +2,53 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>CSPORTS | Холст</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+        html, body {
+            width: 100%;
+            overflow-x: hidden;
+        }
+
         body {
             background: #f2f2f7;
             min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             justify-content: center;
-            padding: 20px;
+            padding: 12px;
+            padding-left: max(12px, env(safe-area-inset-left));
+            padding-right: max(12px, env(safe-area-inset-right));
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-text-size-adjust: 100%;
         }
 
         .stage {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
             width: 100%;
             max-width: 521px;
         }
 
+        /* ================= ХОЛСТ ================= */
         .canvas {
             position: relative;
             width: 100%;
             aspect-ratio: 1 / 1;
+            max-height: 70vh;
+            max-height: 70dvh;
             background-color: #6a1b9a;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             overflow: hidden;
             touch-action: none;
             cursor: grab;
+            margin: 0 auto;
         }
         .canvas.dragging { cursor: grabbing; }
 
@@ -54,115 +69,117 @@
             outline-offset: -2px;
         }
 
-        /* --- БЛОК НАСТРОЕК --- */
+        /* ================= НАСТРОЙКИ ================= */
         .settings-panel {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
+            width: 100%;
         }
 
-        /* Кнопка скрытия глобальных настроек */
         .toggle-global-btn {
-            align-self: flex-end;
-            padding: 8px 12px;
+            align-self: stretch;
+            padding: 12px;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             background: #e5e5ea;
             color: #1a2b3c;
             font-family: inherit;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 600;
             cursor: pointer;
             transition: background 0.2s;
-            margin-bottom: -4px;
+            min-height: 44px;
         }
         .toggle-global-btn:hover { background: #d5d5da; }
 
         .global-settings-container {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
         }
-        .global-settings-container.hidden {
-            display: none;
-        }
+        .global-settings-container.hidden { display: none; }
 
         .global-settings {
             border-radius: 10px;
-            padding: 12px 14px;
-            font-size: 14px;
+            padding: 10px 12px;
+            font-size: 13px;
             font-weight: 700;
             color: #1a2b3c;
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: 12px;
+            gap: 8px 10px;
         }
-        
+
         .global-settings .title {
             padding-right: 8px;
             font-weight: 700;
+            flex-basis: 100%;
         }
 
         .global-cards { background: #e3f2fd; border: 2px solid #42a5f5; }
-        .global-cards .title { border-right: 1px solid #90caf9; color: #1565c0; }
+        .global-cards .title { color: #1565c0; border-bottom: 1px solid #90caf9; padding-bottom: 4px; }
         .global-cards input[type="number"] { border: 1px solid #90caf9; }
         .global-cards input[type="number"]:focus { border-color: #1565c0; }
 
         .global-logos-1 { background: #fff9c4; border: 2px solid #fbc02d; }
-        .global-logos-1 .title { border-right: 1px solid #fbc02d; color: #f57f17; }
+        .global-logos-1 .title { color: #f57f17; border-bottom: 1px solid #fbc02d; padding-bottom: 4px; }
         .global-logos-1 input[type="number"] { border: 1px solid #fbc02d; }
         .global-logos-1 input[type="number"]:focus { border-color: #f57f17; }
 
         .global-logos-2 { background: #fce4ec; border: 2px solid #f06292; }
-        .global-logos-2 .title { border-right: 1px solid #f06292; color: #c2185b; }
+        .global-logos-2 .title { color: #c2185b; border-bottom: 1px solid #f06292; padding-bottom: 4px; }
         .global-logos-2 input[type="number"] { border: 1px solid #f06292; }
         .global-logos-2 input[type="number"]:focus { border-color: #c2185b; }
 
         .global-settings input[type="number"] {
-            width: 74px;
-            padding: 6px 8px;
+            width: 84px;
+            padding: 8px;
             font-family: inherit;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: 700;
             text-align: right;
             border-radius: 6px;
             background: #ffffff;
             color: #1a2b3c;
             outline: none;
+            min-width: 0;
         }
 
-        /* Редактор лого */
+        /* ================= РЕДАКТОР ЛОГО ================= */
         .logo-editor {
             background: #ffffff;
             border: 2px solid #1a2b3c;
             border-radius: 10px;
-            padding: 12px 14px;
+            padding: 12px;
             display: none;
             flex-direction: column;
             gap: 8px;
         }
         .logo-editor .title { font-size: 14px; font-weight: 700; color: #1a2b3c; }
         .logo-editor input {
-            padding: 10px;
+            padding: 12px;
             border: 1px solid #e5e5ea;
             border-radius: 6px;
-            font-size: 15px;
+            font-size: 16px;
             outline: none;
             font-weight: 600;
             color: #1a2b3c;
+            width: 100%;
         }
         .logo-editor input:focus { border-color: #1a2b3c; }
         .logo-editor .status-inline { font-size: 12px; font-weight: 600; min-height: 14px; }
 
+        /* ================= КНОПКИ ================= */
         .controls {
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
         }
         .add-btn, .hide-checked-btn, .center-btn {
-            flex: 1;
-            padding: 12px;
+            flex: 1 1 100%;
+            padding: 14px 12px;
             border: none;
             border-radius: 10px;
             font-family: inherit;
@@ -170,7 +187,8 @@
             font-weight: 600;
             cursor: pointer;
             transition: background 0.2s;
-            min-width: 140px;
+            min-height: 48px;
+            min-width: 0;
         }
         .add-btn { background: #1a2b3c; color: #fff; }
         .add-btn:hover { background: #0f1a26; }
@@ -180,6 +198,7 @@
         .center-btn { background: #4a5568; color: #fff; width: 100%; }
         .center-btn:hover { background: #2d3748; }
 
+        /* ================= СПИСОК КООРДИНАТ ================= */
         .coords-list {
             display: flex;
             flex-direction: column;
@@ -189,14 +208,14 @@
         .coords {
             background: #ffffff;
             border-radius: 10px;
-            padding: 10px 14px;
+            padding: 10px 12px;
             font-size: 13px;
             font-weight: 600;
             color: #1a2b3c;
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: 8px 12px;
+            gap: 8px 10px;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
             font-variant-numeric: tabular-nums;
             cursor: pointer;
@@ -207,22 +226,19 @@
             border-color: #1a2b3c;
             background: #f7f9fc;
         }
-        
-        .coords.hidden-settings {
-            display: none !important;
-        }
+        .coords.hidden-settings { display: none !important; }
 
         .coords .visibility-toggle {
             display: flex;
             align-items: center;
             gap: 4px;
-            margin-right: 8px;
+            margin-right: 4px;
             cursor: pointer;
         }
         .coords .visibility-toggle input {
             cursor: pointer;
-            width: 16px;
-            height: 16px;
+            width: 20px;
+            height: 20px;
             accent-color: #1a2b3c;
         }
 
@@ -231,15 +247,16 @@
             font-weight: 700;
             padding-right: 8px;
             border-right: 1px solid #e5e5ea;
+            flex-shrink: 0;
         }
         .coords span { white-space: nowrap; }
         .coords .label { color: #8e8e93; font-weight: 500; margin-right: 4px; }
 
         .coords input[type="number"] {
-            width: 64px;
-            padding: 4px 6px;
+            width: 68px;
+            padding: 8px 6px;
             font-family: inherit;
-            font-size: 13px;
+            font-size: 16px;
             font-weight: 600;
             text-align: right;
             border: 1px solid #e5e5ea;
@@ -248,6 +265,7 @@
             color: #1a2b3c;
             outline: none;
             font-variant-numeric: tabular-nums;
+            min-width: 0;
         }
         .coords input[type="number"]:focus {
             background: #fff;
@@ -256,15 +274,16 @@
 
         .coords .remove {
             margin-left: auto;
-            padding: 4px 10px;
+            padding: 8px 12px;
             border: none;
             border-radius: 6px;
             background: #ffe5e5;
             color: #b00020;
             font-family: inherit;
-            font-size: 12px;
+            font-size: 14px;
             font-weight: 600;
             cursor: pointer;
+            min-width: 40px;
         }
         .coords .remove:hover { background: #ffd0d0; }
 
@@ -273,6 +292,36 @@
             color: #8e8e93;
             text-align: center;
             font-weight: 500;
+            padding: 4px 0;
+        }
+
+        /* ================= МЕДИА-ЗАПРОСЫ ================= */
+        @media (min-width: 520px) {
+            .controls .add-btn,
+            .controls .hide-checked-btn { flex: 1 1 calc(50% - 4px); }
+            .toggle-global-btn { align-self: flex-end; }
+            .global-settings .title {
+                flex-basis: auto;
+                border-bottom: none;
+                padding-bottom: 0;
+                border-right: 1px solid rgba(0,0,0,0.12);
+            }
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 8px; padding-top: max(8px, env(safe-area-inset-top)); }
+            .canvas { max-height: 60vh; max-height: 60dvh; }
+            .coords { padding: 10px; }
+            .coords .title { flex-basis: 100%; border-right: none; padding-right: 0; padding-bottom: 6px; border-bottom: 1px solid #e5e5ea; }
+            .coords input[type="number"] { width: 72px; }
+            .global-settings input[type="number"] { width: 78px; }
+        }
+
+        @media (max-width: 360px) {
+            .coords input[type="number"] { width: 64px; }
+            .coords .label { display: none; }
+            .global-settings input[type="number"] { width: 70px; }
+            .coords .remove { margin-left: 0; }
         }
     </style>
 </head>
@@ -283,34 +332,30 @@
 
         <div class="settings-panel">
             <button class="toggle-global-btn" id="toggleGlobalBtn">Показать глобальные настройки</button>
-            
+
             <div class="global-settings-container hidden" id="globalSettingsContainer">
-                <!-- ГЛОБАЛЬНЫЕ КООРДИНАТЫ КАРТОЧЕК -->
                 <div class="global-settings global-cards">
                     <span class="title">Все карточки (Глобально)</span>
-                    <span><span class="label">X:</span><input type="number" id="globalCardX" step="1" value="-3"></span>
-                    <span><span class="label">Y:</span><input type="number" id="globalCardY" step="1" value="2"></span>
+                    <span><span class="label">X:</span><input type="number" id="globalCardX" step="1" value="-3" inputmode="decimal"></span>
+                    <span><span class="label">Y:</span><input type="number" id="globalCardY" step="1" value="2" inputmode="decimal"></span>
                 </div>
 
-                <!-- ГЛОБАЛЬНЫЕ КООРДИНАТЫ ЛОГОТИПОВ 1 -->
                 <div class="global-settings global-logos-1">
                     <span class="title">Лого 1 (Глобально)</span>
-                    <span><span class="label">X:</span><input type="number" id="globalLogo1X" step="1" value="-6"></span>
-                    <span><span class="label">Y:</span><input type="number" id="globalLogo1Y" step="1" value="0"></span>
+                    <span><span class="label">X:</span><input type="number" id="globalLogo1X" step="1" value="-6" inputmode="decimal"></span>
+                    <span><span class="label">Y:</span><input type="number" id="globalLogo1Y" step="1" value="0" inputmode="decimal"></span>
                 </div>
 
-                <!-- ГЛОБАЛЬНЫЕ КООРДИНАТЫ ЛОГОТИПОВ 2 -->
                 <div class="global-settings global-logos-2">
                     <span class="title">Лого 2 (Глобально)</span>
-                    <span><span class="label">X:</span><input type="number" id="globalLogo2X" step="1" value="-58"></span>
-                    <span><span class="label">Y:</span><input type="number" id="globalLogo2Y" step="1" value="0"></span>
+                    <span><span class="label">X:</span><input type="number" id="globalLogo2X" step="1" value="-58" inputmode="decimal"></span>
+                    <span><span class="label">Y:</span><input type="number" id="globalLogo2Y" step="1" value="0" inputmode="decimal"></span>
                 </div>
             </div>
 
-            <!-- ПАНЕЛЬ РЕДАКТИРОВАНИЯ ЛОГО -->
             <div class="logo-editor" id="logoEditor">
                 <div class="title">Настройка логотипа</div>
-                <input type="text" id="teamInput" list="teamList" placeholder="Введите название команды..." autocomplete="off" />
+                <input type="text" id="teamInput" list="teamList" placeholder="Введите название команды..." autocomplete="off" inputmode="text" />
                 <div id="statusLogo" class="status-inline"></div>
                 <datalist id="teamList"></datalist>
             </div>
@@ -333,12 +378,11 @@
         logosLayer.id = 'logosLayer';
         logosLayer.style.cssText = 'position:absolute; inset:0; z-index:10; pointer-events:none;';
         canvas.appendChild(logosLayer);
-        
+
         const IMG_SRC_1 = 'https://res.cloudinary.com/dplmdnxvk/image/upload/v1794658258/w5mplrlvkecl77ia8fbq.png';
-        const IMG_SRC_2 = 'https://res.cloudinary.com/dplmdnxvk/image/upload/v1794662358/tzcyf4txvq00ggwk4soz.png'; 
+        const IMG_SRC_2 = 'https://res.cloudinary.com/dplmdnxvk/image/upload/v1794662358/tzcyf4txvq00ggwk4soz.png';
         const IMG_SRC_3 = 'https://res.cloudinary.com/dplmdnxvk/image/upload/v1794663822/qxugvm4od0mlhf7pzgkm.png';
 
-        // Базовые карточки
         const BASE_CARDS = [
             { id: 1,  x: -210, y: -100 },
             { id: 5,  x: -210, y: -60 },
@@ -400,14 +444,12 @@
         const MIN_USER_SCALE = 1;
         const MAX_USER_SCALE = 1000;
 
-        // Массив логотипов на холсте
         const logoItems = [];
         BASE_CARDS.forEach((card, i) => {
             logoItems.push({ id: `l1_${i}`, type: 'logo1', offsetX: card.x - 31, offsetY: card.y - 12, teamName: '', src: '' });
             logoItems.push({ id: `l2_${i}`, type: 'logo2', offsetX: card.x - 31, offsetY: card.y - 12, teamName: '', src: '' });
         });
 
-        // --- СКРЫТИЕ ГЛОБАЛЬНЫХ НАСТРОЕК ---
         const toggleGlobalBtn = document.getElementById('toggleGlobalBtn');
         const globalSettingsContainer = document.getElementById('globalSettingsContainer');
 
@@ -479,10 +521,10 @@
         }
 
         const hideCheckedBtn = document.getElementById('hideCheckedBtn');
-        
+
         function toggleHideSettings() {
             isSettingsHiddenMode = !isSettingsHiddenMode;
-            
+
             if (isSettingsHiddenMode) {
                 hideCheckedBtn.textContent = 'Показать настройки';
                 hideCheckedBtn.classList.add('active');
@@ -538,9 +580,9 @@
                     <input type="checkbox" class="ivis" ${preset && preset.checked === false ? '' : 'checked'}>
                 </label>
                 <span class="title">Карточка ${id}</span>
-                <span><span class="label">X:</span><input type="number" class="ix" step="1" value="${layer.offsetX}"></span>
-                <span><span class="label">Y:</span><input type="number" class="iy" step="1" value="${layer.offsetY}"></span>
-                <span><span class="label">Масштаб, %:</span><input type="number" class="is" step="1" min="${MIN_USER_SCALE}" max="${MAX_USER_SCALE}" value="${layer.userScalePercent}"></span>
+                <span><span class="label">X:</span><input type="number" class="ix" step="1" value="${layer.offsetX}" inputmode="decimal"></span>
+                <span><span class="label">Y:</span><input type="number" class="iy" step="1" value="${layer.offsetY}" inputmode="decimal"></span>
+                <span><span class="label">Масштаб, %:</span><input type="number" class="is" step="1" min="${MIN_USER_SCALE}" max="${MAX_USER_SCALE}" value="${layer.userScalePercent}" inputmode="decimal"></span>
                 <span><span class="label">Размер:</span><span class="csz">0 × 0</span></span>
                 <button class="remove" title="Удалить">✕</button>
             `;
@@ -633,9 +675,16 @@
         let dragStartPositions = [];
         let draggedLayer = null;
 
-        canvas.addEventListener('mousedown', (e) => {
-            if (e.button !== 0) return;
-            
+        function getPoint(e) {
+            if (e.touches && e.touches.length) {
+                return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+            return { x: e.clientX, y: e.clientY };
+        }
+
+        function startDrag(e) {
+            if (e.button !== undefined && e.button !== 0) return;
+
             const logoItemEl = e.target.closest('.logo-item');
             if (logoItemEl) {
                 e.stopPropagation();
@@ -643,10 +692,12 @@
                 return;
             }
 
+            const pt = getPoint(e);
+
             let targetLayer = null;
             for (let i = layers.length - 1; i >= 0; i--) {
                 const r = layers[i].img.getBoundingClientRect();
-                if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
+                if (pt.x >= r.left && pt.x <= r.right && pt.y >= r.top && pt.y <= r.bottom) {
                     targetLayer = layers[i];
                     break;
                 }
@@ -654,6 +705,7 @@
             if (!targetLayer) {
                 selectedLogoLayer = null;
                 document.getElementById('logoEditor').style.display = 'none';
+                renderLogos();
                 return;
             }
 
@@ -669,19 +721,21 @@
             isDragging = true;
             draggedLayer = targetLayer;
             canvas.classList.add('dragging');
-            dragStartX = e.clientX;
-            dragStartY = e.clientY;
+            dragStartX = pt.x;
+            dragStartY = pt.y;
             dragStartPositions = [...activeLayers].map(l => ({
                 layer: l,
                 offsetX: l.offsetX,
                 offsetY: l.offsetY
             }));
-            e.preventDefault();
-        });
-        window.addEventListener('mousemove', (e) => {
+            if (e.cancelable) e.preventDefault();
+        }
+
+        function moveDrag(e) {
             if (!isDragging) return;
-            const dx = e.clientX - dragStartX;
-            const dy = e.clientY - dragStartY;
+            const pt = getPoint(e);
+            const dx = pt.x - dragStartX;
+            const dy = pt.y - dragStartY;
             dragStartPositions.forEach(p => {
                 p.layer.offsetX = p.offsetX + dx;
                 p.layer.offsetY = p.offsetY + dy;
@@ -689,14 +743,25 @@
                 updateInputs(p.layer);
             });
             updateGlobalInputs();
-        });
-        window.addEventListener('mouseup', () => {
+            if (e.cancelable) e.preventDefault();
+        }
+
+        function endDrag() {
             if (isDragging) {
                 isDragging = false;
                 draggedLayer = null;
                 canvas.classList.remove('dragging');
             }
-        });
+        }
+
+        canvas.addEventListener('mousedown', startDrag);
+        window.addEventListener('mousemove', moveDrag);
+        window.addEventListener('mouseup', endDrag);
+
+        canvas.addEventListener('touchstart', startDrag, { passive: false });
+        window.addEventListener('touchmove', moveDrag, { passive: false });
+        window.addEventListener('touchend', endDrag);
+        window.addEventListener('touchcancel', endDrag);
 
         function centerAllLayers() {
             if (layers.length === 0) return;
@@ -857,21 +922,28 @@
         const teamInput = document.getElementById('teamInput');
         const statusLogo = document.getElementById('statusLogo');
 
+        function getLogoSize() {
+            // Адаптивный размер логотипа: от 18 до 30px в зависимости от ширины холста
+            const w = canvas.clientWidth || 300;
+            return Math.round(Math.min(30, Math.max(18, w * 0.055)));
+        }
+
         function renderLogos() {
             logosLayer.innerHTML = '';
+            const size = getLogoSize();
             logoItems.forEach(logo => {
                 const div = document.createElement('div');
                 div.className = 'logo-item';
                 div.dataset.id = logo.id;
-                
+
                 const leftPct = 50 + (logo.offsetX / (canvas.clientWidth / 2)) * 50;
                 const topPct = 50 + (logo.offsetY / (canvas.clientHeight / 2)) * 50;
-                
+
                 div.style.position = 'absolute';
                 div.style.left = leftPct + '%';
                 div.style.top = topPct + '%';
-                div.style.width = '26px';
-                div.style.height = '26px';
+                div.style.width = size + 'px';
+                div.style.height = size + 'px';
                 div.style.transform = 'translate(-50%, -50%)';
                 div.style.pointerEvents = 'auto';
                 div.style.cursor = 'pointer';
@@ -879,7 +951,7 @@
                 div.style.backgroundSize = 'contain';
                 div.style.backgroundPosition = 'center';
                 div.style.backgroundRepeat = 'no-repeat';
-                
+
                 if (logo.src) {
                     div.style.backgroundImage = `url('${logo.src}')`;
                 } else {
@@ -891,8 +963,8 @@
                 }
 
                 div.addEventListener('mouseenter', () => { div.style.outline = '1px solid rgba(255,255,255,0.7)'; });
-                div.addEventListener('mouseleave', () => { 
-                    if (!selectedLogoLayer || selectedLogoLayer.id !== logo.id) div.style.outline = 'none'; 
+                div.addEventListener('mouseleave', () => {
+                    if (!selectedLogoLayer || selectedLogoLayer.id !== logo.id) div.style.outline = 'none';
                 });
 
                 logosLayer.appendChild(div);
@@ -902,7 +974,7 @@
         function selectLogo(id) {
             selectedLogoLayer = logoItems.find(l => l.id === id);
             if (!selectedLogoLayer) return;
-            
+
             logoEditor.style.display = 'flex';
             teamInput.value = selectedLogoLayer.teamName || '';
             statusLogo.textContent = selectedLogoLayer.src ? '✓ Логотип установлен' : '';
@@ -914,7 +986,7 @@
             if (!selectedLogoLayer) return;
             const value = teamInput.value.trim();
             selectedLogoLayer.teamName = value;
-            
+
             if (!value) {
                 selectedLogoLayer.src = '';
                 statusLogo.textContent = '';
@@ -955,7 +1027,7 @@
                 loadedCount++;
                 if (loadedCount === layers.length) {
                     centerAllLayers();
-                    
+
                     setTimeout(() => {
                         globalCardXInput.value = -3;
                         globalCardXInput.dispatchEvent(new Event('input'));
@@ -974,7 +1046,7 @@
                     }, 50);
                 }
             };
-            
+
             layers.forEach(layer => {
                 if (layer.img.complete) checkAllLoaded();
                 else layer.img.addEventListener('load', checkAllLoaded);
@@ -984,10 +1056,28 @@
         loadTeams().then(() => {
             initDefaultLayers();
         });
-        
+
         setTimeout(() => {
             if (!isSettingsHiddenMode) toggleHideSettings();
         }, 100);
+
+        // Пересчёт при изменении размера окна/повороте экрана
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                layers.forEach(l => fitLayerToCanvas(l));
+                renderLogos();
+            }, 120);
+        });
+
+        // Пересчёт при повороте экрана (orientationchange)
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                layers.forEach(l => fitLayerToCanvas(l));
+                renderLogos();
+            }, 300);
+        });
     </script>
 </body>
 </html>
