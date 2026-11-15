@@ -59,11 +59,9 @@
         height: 100%;
         z-index: 0;
         touch-action: none;
-        cursor: grab;
         display: none;
     }
     .bg-canvas.visible { display: block; }
-    .bg-canvas.dragging { cursor: grabbing; }
 
     .layer {
         position: absolute; top: 0; left: 0;
@@ -568,7 +566,7 @@
         showToast('Возвращено по умолчанию');
     });
 
-    // --- ФОН ХОЛСТА: pan + zoom ---
+    // --- ФОН ХОЛСТА (без перемещения и зума) ---
     const canvas = document.getElementById('bgCanvas');
     const preview = document.getElementById('preview');
     const bgUrl = document.getElementById('bgUrl');
@@ -588,15 +586,6 @@
 
     function saveView() {
         store.set('view', state.view);
-    }
-    function restoreView() {
-        const v = store.get('view', null);
-        if (v && typeof v.scale === 'number' && isFinite(v.scale)) {
-            state.view = { scale: v.scale, x: v.x || 0, y: v.y || 0 };
-            requestRender();
-            return true;
-        }
-        return false;
     }
 
     function fitScale() {
@@ -657,7 +646,7 @@
         state.src = c;
     }
 
-    function loadBackground(src, restoreViewFlag = false) {
+    function loadBackground(src) {
         if (!src) {
             state.src = null;
             state.img = null;
@@ -676,14 +665,9 @@
             state.flipV = false;
             applyRotation();
             canvas.classList.add('visible');
-
-            if (restoreViewFlag && restoreView()) {
-                // восстановлен сохранённый view
-            } else {
-                centerImage();
-            }
+            centerImage();
             requestRender();
-            if (!restoreViewFlag && !src.startsWith('blob:')) {
+            if (!src.startsWith('blob:')) {
                 store.set('bgUrl', src);
             }
             saveView();
@@ -691,95 +675,6 @@
         img.onerror = () => showToast('Не удалось загрузить картинку');
         img.src = src;
     }
-
-    // --- жесты ---
-    const pointers = new Map();
-    let gesture = null;
-
-    function clientToBoard(clientX, clientY) {
-        const r = canvas.getBoundingClientRect();
-        return {
-            x: (clientX - r.left) / r.width * BG_SIZE,
-            y: (clientY - r.top) / r.height * BG_SIZE
-        };
-    }
-
-    function startGesture() {
-        const list = [...pointers.values()];
-        const [a, b] = list;
-        const mid = clientToBoard(
-            list.reduce((s, p) => s + p.x, 0) / list.length,
-            list.reduce((s, p) => s + p.y, 0) / list.length
-        );
-        gesture = {
-            view: { ...state.view },
-            mid,
-            dist: a && b ? Math.hypot(a.x - b.x, a.y - b.y) || 1 : 1
-        };
-    }
-
-    function zoomAt(targetScale, cx, cy) {
-        const base = fitScale();
-        const minS = base * 0.2;
-        const maxS = base * 8;
-        const s = Math.min(maxS, Math.max(minS, targetScale));
-        const ratio = s / state.view.scale;
-        state.view = {
-            scale: s,
-            x: cx - (cx - state.view.x) * ratio,
-            y: cy - (cy - state.view.y) * ratio
-        };
-    }
-
-    canvas.addEventListener('pointerdown', (e) => {
-        if (!state.img) return;
-        canvas.setPointerCapture(e.pointerId);
-        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-        canvas.classList.add('dragging');
-        startGesture();
-    });
-
-    canvas.addEventListener('pointermove', (e) => {
-        if (!pointers.has(e.pointerId) || !gesture) return;
-        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-        const [a, b] = [...pointers.values()];
-        if (a && b) {
-            const dist = Math.hypot(a.x - b.x, a.y - b.y);
-            state.view = { ...gesture.view };
-            zoomAt(gesture.view.scale * (dist / gesture.dist), gesture.mid.x, gesture.mid.y);
-            const delta = clientToBoard((a.x + b.x) / 2, (a.y + b.y) / 2);
-            state.view.x += delta.x - gesture.mid.x;
-            state.view.y += delta.y - gesture.mid.y;
-        } else if (a) {
-            const p = clientToBoard(a.x, a.y);
-            state.view = {
-                ...gesture.view,
-                x: gesture.view.x + p.x - gesture.mid.x,
-                y: gesture.view.y + p.y - gesture.mid.y
-            };
-        }
-        requestRender();
-        saveView();
-    });
-
-    function endPointer(e) {
-        pointers.delete(e.pointerId);
-        if (pointers.size) return startGesture();
-        gesture = null;
-        canvas.classList.remove('dragging');
-        saveView();
-    }
-    canvas.addEventListener('pointerup', endPointer);
-    canvas.addEventListener('pointercancel', endPointer);
-
-    canvas.addEventListener('wheel', (e) => {
-        if (!state.img) return;
-        e.preventDefault();
-        const p = clientToBoard(e.clientX, e.clientY);
-        zoomAt(state.view.scale * Math.exp(-e.deltaY * 0.0015), p.x, p.y);
-        requestRender();
-        saveView();
-    }, { passive: false });
 
     // --- кнопки фона ---
     document.getElementById('applyBgUrl').onclick = () => {
@@ -805,7 +700,7 @@
         store.remove('bgUrl');
         store.remove('view');
         bgUrl.value = DEFAULT_BG_URL;
-        loadBackground(DEFAULT_BG_URL, true);
+        loadBackground(DEFAULT_BG_URL);
     };
 
     new ResizeObserver(() => requestRender()).observe(preview);
@@ -814,10 +709,10 @@
     const savedBg = store.get('bgUrl', '');
     if (savedBg) {
         bgUrl.value = savedBg;
-        loadBackground(savedBg, true);
+        loadBackground(savedBg);
     } else {
         bgUrl.value = DEFAULT_BG_URL;
-        loadBackground(DEFAULT_BG_URL, true);
+        loadBackground(DEFAULT_BG_URL);
     }
     restoreSceneContent();
 
