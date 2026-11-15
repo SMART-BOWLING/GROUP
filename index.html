@@ -19,7 +19,6 @@
         padding: 20px 16px; min-height: 100vh; gap: 12px;
     }
 
-    /* Превью — фиксируем аспект 1:1 */
     .preview {
         position: relative;
         width: 100%;
@@ -30,7 +29,6 @@
         flex-shrink: 0;
     }
 
-    /* Холст */
     .board {
         position: relative;
         width: 100%;
@@ -44,7 +42,6 @@
         overflow: hidden;
     }
 
-    /* Внутренний контейнер холста 1000x1000 */
     .board-inner {
         width: 1000px;
         height: 1000px;
@@ -55,7 +52,6 @@
         transform: scale(var(--k, 0.521));
     }
 
-    /* Фон-канвас (двигается/зумится) */
     .bg-canvas {
         position: absolute;
         inset: 0;
@@ -122,7 +118,6 @@
     }
     .team-input-bar input:focus { border-color: #9a5cf8; }
 
-    /* Панель фона */
     .bg-panel {
         display: flex; flex-direction: column; gap: 8px;
         width: 100%; max-width: 521px;
@@ -140,7 +135,6 @@
     }
     .bg-panel input[type=text]:focus { border-color: #9a5cf8; }
 
-    /* Кнопки (стили из вашего второго файла) */
     .primary-btn, .secondary-btn {
         cursor: pointer; border: 0; border-radius: 12px;
         padding: 10px 14px; font-family: inherit; font-weight: 600; font-size: 14px;
@@ -175,7 +169,6 @@
 
 <div class="preview" id="preview">
     <div class="board-inner" id="board">
-        <!-- Фон-канвас -->
         <canvas class="bg-canvas" id="bgCanvas"></canvas>
 
         <div class="layer" data-id="99" style="width: 1000px; height: 1000px; left: 0px; top: 0px; z-index: 1;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1794734881/rjpi1tfask7sdrzsjvxf.png"></div></div>
@@ -358,7 +351,6 @@
     </div>
 </div>
 
-<!-- Панель фона -->
 <div class="bg-panel">
     <div class="row">
         <input type="text" id="bgUrl" placeholder="URL картинки" />
@@ -384,7 +376,6 @@
     <p style="font-size:13px;color:#8e8e93;margin:0;">Фон можно двигать пальцем или мышью, масштаб — щипком или колесом.</p>
 </div>
 
-<!-- Действия -->
 <div class="actions-bar">
     <div class="btn-group">
         <button type="button" id="btnDownload" class="primary-btn">⬇ Скачать</button>
@@ -778,6 +769,29 @@
     }
 
     // --- СКАЧИВАНИЕ / ПОДЕЛИТЬСЯ ---
+    // Превращаем текущий фон в <img> (dataURL 1000x1000), чтобы html2canvas его захватил
+    function snapshotBgAsImg() {
+        if (!state.src) return null;
+        const tmp = document.createElement('canvas');
+        tmp.width = 1000;
+        tmp.height = 1000;
+        const ctx = tmp.getContext('2d');
+        if (!ctx) return null;
+        ctx.imageSmoothingQuality = 'high';
+        const { scale, x, y } = state.view;
+        ctx.drawImage(state.src, x, y, imgW(state.img) * scale, imgH(state.img) * scale);
+
+        const img = document.createElement('img');
+        img.src = tmp.toDataURL('image/png');
+        img.style.position = 'absolute';
+        img.style.inset = '0';
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.zIndex = '0';
+        img.style.pointerEvents = 'none';
+        return img;
+    }
+
     async function captureScene() {
         const prevOutlines = [];
         document.querySelectorAll('.layer, .score').forEach(el => {
@@ -785,10 +799,18 @@
             el.style.outline = 'none';
         });
 
-        // отрисовать фон в полном разрешении
-        if (state.src) renderCanvas(1000);
-
         const board = document.getElementById('board');
+
+        // Временно подменяем canvas на <img> с фоном
+        const bgImg = snapshotBgAsImg();
+        let canvasWasVisible = false;
+        if (bgImg) {
+            canvasWasVisible = canvas.classList.contains('visible');
+            canvas.style.display = 'none';
+            board.insertBefore(bgImg, board.firstChild);
+        }
+
+        // Клон board (в нём уже есть <img> фон)
         const clone = board.cloneNode(true);
         clone.style.transform = 'none';
         clone.style.position = 'fixed';
@@ -798,6 +820,13 @@
         clone.style.height = '1000px';
         clone.style.setProperty('--k', '1');
         document.body.appendChild(clone);
+
+        // Убираем временный <img> из реального board
+        if (bgImg) {
+            board.removeChild(bgImg);
+            canvas.style.display = '';
+            canvas.classList.toggle('visible', canvasWasVisible);
+        }
 
         try {
             return await html2canvas(clone, {
@@ -814,7 +843,6 @@
             document.querySelectorAll('.layer, .score').forEach((el, i) => {
                 el.style.outline = prevOutlines[i] || '';
             });
-            // вернуть фон в экранный размер
             requestRender();
         }
     }
