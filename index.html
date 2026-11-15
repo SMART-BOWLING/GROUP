@@ -374,6 +374,8 @@
     const SHEET_ID = "188jMHUJs1KkmCAzG7XZYTnTY9SnNIx0JlXJoEdMTees";
     const teamsMap = new Map();
 
+    const DEFAULT_BG_URL = "https://res.cloudinary.com/dplmdnxvk/image/upload/v1794757869/axvvp2zcfnbkq9cuab34.png";
+
     let activeElement = null;
     let activeType = null;
     let applyTimer = null;
@@ -800,16 +802,22 @@
 
     document.getElementById('clearBg').onclick = () => {
         bgUrl.value = '';
-        loadBackground('');
+        store.remove('bgUrl');
+        store.remove('view');
+        bgUrl.value = DEFAULT_BG_URL;
+        loadBackground(DEFAULT_BG_URL, true);
     };
 
     new ResizeObserver(() => requestRender()).observe(preview);
 
-    // восстановление URL из localStorage
+    // Восстановление/загрузка фона
     const savedBg = store.get('bgUrl', '');
     if (savedBg) {
         bgUrl.value = savedBg;
         loadBackground(savedBg, true);
+    } else {
+        bgUrl.value = DEFAULT_BG_URL;
+        loadBackground(DEFAULT_BG_URL, true);
     }
     restoreSceneContent();
 
