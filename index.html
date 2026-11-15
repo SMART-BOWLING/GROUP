@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ru"><head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Шаблон сцены</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
@@ -17,28 +17,40 @@
         padding: 20px 16px; min-height: 100vh; gap: 12px;
     }
 
-    /* Превью — как в твоём примере */
+    /* Превью — фиксируем аспект 1:1 */
     .preview {
+        position: relative;
+        width: 100%;
+        max-width: 521px;
         aspect-ratio: 1 / 1;
-        width: 100%; max-width: 521px;
-        position: relative; overflow: hidden;
+        overflow: hidden;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         flex-shrink: 0;
-        /* Важно: contain + явная аспектность */
-        contain: layout size;
     }
 
-    /* Холст — фиксированные 1000x1000, как в примере */
+    /* Холст — НЕ absolute, а обычный блок, растягивается на 100% */
     .board {
-        --k: 0.521;
-        width: 1000px; height: 1000px;
-        transform: scale(var(--k));
+        position: relative;
+        width: 100%;
+        height: 100%;
         transform-origin: 0 0;
-        position: absolute; top: 0; left: 0; overflow: hidden;
+        transform: scale(var(--k, 1));
         background: linear-gradient(135deg, #3a4044, #1f2327);
-        touch-action: none; user-select: none;
+        touch-action: none;
+        user-select: none;
         will-change: transform;
-        transform-style: preserve-3d;
+        overflow: hidden;
+    }
+
+    /* Внутренний контейнер холста 1000x1000 */
+    .board-inner {
+        width: 1000px;
+        height: 1000px;
+        position: absolute;
+        top: 0;
+        left: 0;
+        transform-origin: 0 0;
+        transform: scale(var(--k, 0.521));
     }
 
     .layer {
@@ -97,8 +109,8 @@
 </head>
 <body>
 
-<div class="preview">
-    <div class="board" id="board">
+<div class="preview" id="preview">
+    <div class="board-inner" id="board">
         <div class="layer" data-id="99" style="width: 1000px; height: 1000px; left: 0px; top: 0px; z-index: 1;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1794734881/rjpi1tfask7sdrzsjvxf.png"></div></div>
 
         <!-- Колонка 37.5 / 137.5 -->
@@ -394,28 +406,37 @@
         }
     });
 
-    // --- АДАПТАЦИЯ ХОЛСТА (как в примере) ---
+    // --- АДАПТАЦИЯ ХОЛСТА ---
     function fitPreview() {
         const preview = document.getElementById('preview');
         const board = document.getElementById('board');
         if (!preview || !board) return;
         
+        // Получаем реальную ширину превью в CSS-пикселях
         const rect = preview.getBoundingClientRect();
         const k = rect.width / 1000;
+        
+        // Применяем масштаб к внутреннему холсту
         board.style.setProperty('--k', k);
+        board.style.transform = `scale(${k})`;
     }
 
+    // Дебаунс на resize
     let resizeTimer;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(fitPreview, 100);
+        resizeTimer = setTimeout(fitPreview, 50);
     });
 
+    // ResizeObserver для мгновенной реакции на изменение размера превью
     if (window.ResizeObserver) {
         new ResizeObserver(fitPreview).observe(document.getElementById('preview'));
     }
 
+    // Запуск после загрузки
     window.addEventListener('load', fitPreview);
+    // И сразу при инициализации (на случай, если load уже прошёл)
+    fitPreview();
 
     loadTeams();
 </script>
