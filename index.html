@@ -1,13 +1,15 @@
 <!doctype html>
-<html lang="ru"><head>
+<html lang="ru">
+<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Шаблон сцены</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
-    :root { --color-field: #f2f2f7; }
+    :root { --color-field: #f2f2f7; --color-ink:#1c1c1e; --color-navy:#1a2b3c; --color-chip:#e5e5ea; --color-muted:#8e8e93; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html { color-scheme: light; width: 100%; }
     body {
@@ -28,7 +30,7 @@
         flex-shrink: 0;
     }
 
-    /* Холст — НЕ absolute, а обычный блок, растягивается на 100% */
+    /* Холст */
     .board {
         position: relative;
         width: 100%;
@@ -52,6 +54,20 @@
         transform-origin: 0 0;
         transform: scale(var(--k, 0.521));
     }
+
+    /* Фон-канвас (двигается/зумится) */
+    .bg-canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+        touch-action: none;
+        cursor: grab;
+        display: none;
+    }
+    .bg-canvas.visible { display: block; }
+    .bg-canvas.dragging { cursor: grabbing; }
 
     .layer {
         position: absolute; top: 0; left: 0;
@@ -105,12 +121,63 @@
         border-radius: 8px; font-family: inherit; font-size: 15px; outline: none;
     }
     .team-input-bar input:focus { border-color: #9a5cf8; }
+
+    /* Панель фона */
+    .bg-panel {
+        display: flex; flex-direction: column; gap: 8px;
+        width: 100%; max-width: 521px;
+        background: #fff; padding: 12px; border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .bg-panel .row { display: flex; align-items: center; gap: 8px; }
+    .bg-panel .row span { min-width: 92px; font-size: 14px; color: var(--color-ink); }
+    .bg-panel input[type=range] { flex: 1; accent-color: var(--color-navy); }
+    .bg-panel output { min-width: 52px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .bg-panel .btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .bg-panel input[type=text] {
+        flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px;
+        font-family: inherit; font-size: 15px; outline: none; min-width: 0;
+    }
+    .bg-panel input[type=text]:focus { border-color: #9a5cf8; }
+
+    /* Кнопки (стили из вашего второго файла) */
+    .primary-btn, .secondary-btn {
+        cursor: pointer; border: 0; border-radius: 12px;
+        padding: 10px 14px; font-family: inherit; font-weight: 600; font-size: 14px;
+        line-height: 1.5; transition: transform .1s ease, background .15s ease;
+        display: inline-flex; align-items: center; justify-content: center;
+        text-decoration: none;
+    }
+    .primary-btn { background: var(--color-navy); color: #fff; }
+    .secondary-btn { background: var(--color-chip); color: var(--color-navy); }
+    .primary-btn:active, .secondary-btn:active { transform: scale(.98); }
+
+    .actions-bar {
+        display: flex; gap: 8px; width: 100%; max-width: 521px;
+        background: #fff; padding: 12px; border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        flex-wrap: wrap;
+    }
+    .actions-bar .btn-group { display: flex; gap: 8px; flex: 1; }
+    .actions-bar .btn-group button { flex: 1; }
+
+    .toast {
+        position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+        background: #1f2327; color: #fff; padding: 12px 20px; border-radius: 10px;
+        font-size: 14px; font-weight: 600; opacity: 0; pointer-events: none;
+        transition: opacity 0.25s ease, transform 0.25s ease; z-index: 9999;
+        max-width: 90vw; text-align: center;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
 
 <div class="preview" id="preview">
     <div class="board-inner" id="board">
+        <!-- Фон-канвас -->
+        <canvas class="bg-canvas" id="bgCanvas"></canvas>
+
         <div class="layer" data-id="99" style="width: 1000px; height: 1000px; left: 0px; top: 0px; z-index: 1;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1794734881/rjpi1tfask7sdrzsjvxf.png"></div></div>
 
         <!-- Колонка 37.5 / 137.5 -->
@@ -291,14 +358,58 @@
     </div>
 </div>
 
+<!-- Панель фона -->
+<div class="bg-panel">
+    <div class="row">
+        <input type="text" id="bgUrl" placeholder="URL картинки" />
+        <button type="button" id="applyBgUrl" class="primary-btn">OK</button>
+    </div>
+    <div class="btn-row">
+        <label class="primary-btn">Файл<input type="file" id="bgFile" accept="image/*" hidden /></label>
+        <button type="button" id="clearBg" class="secondary-btn">Сбросить фон</button>
+    </div>
+    <div class="row">
+        <span>Масштаб</span>
+        <input type="range" id="zoom" min="0.2" max="5" step="0.01" value="1" />
+        <output id="zoomOut">100%</output>
+        <button type="button" id="centerBg" class="secondary-btn">По центру</button>
+    </div>
+    <div class="btn-row">
+        <button type="button" id="fillBg" class="secondary-btn">Заполнить кадр</button>
+        <button type="button" id="rotL" class="secondary-btn">↶ Повернуть</button>
+        <button type="button" id="rotR" class="secondary-btn">↷ Повернуть</button>
+        <button type="button" id="flipH" class="secondary-btn">⇋ Отразить</button>
+        <button type="button" id="flipV" class="secondary-btn">⇅ Отразить</button>
+    </div>
+    <p style="font-size:13px;color:#8e8e93;margin:0;">Фон можно двигать пальцем или мышью, масштаб — щипком или колесом.</p>
+</div>
+
+<!-- Действия -->
+<div class="actions-bar">
+    <div class="btn-group">
+        <button type="button" id="btnDownload" class="primary-btn">⬇ Скачать</button>
+        <button type="button" id="btnShare" class="secondary-btn">📤 Поделиться</button>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
 <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbxJZEfppSo6QZpmpiEDR1FaOpIjHdfQDXdj-x80uoIy-SU30nKgIgfvr3DNgQbroi53/exec";
     const SHEET_ID = "188jMHUJs1KkmCAzG7XZYTnTY9SnNIx0JlXJoEdMTees";
     const teamsMap = new Map();
-    
-    let activeElement = null; 
-    let activeType = null;    
+
+    let activeElement = null;
+    let activeType = null;
     let applyTimer = null;
+
+    const toastEl = document.getElementById('toast');
+    function showToast(msg, ms = 2200) {
+        toastEl.textContent = msg;
+        toastEl.classList.add('show');
+        clearTimeout(showToast._t);
+        showToast._t = setTimeout(() => toastEl.classList.remove('show'), ms);
+    }
 
     async function fetchSheet(sheetName) {
         const url = new URL(API_URL);
@@ -318,7 +429,7 @@
                 const logo = row[4] ? String(row[4]).trim() : "";
                 if (name) teamsMap.set(name.toLowerCase(), { name, logo });
             });
-            
+
             const names = Array.from(teamsMap.values()).map(t => t.name).sort((a, b) => a.localeCompare(b));
             const html = names.map(n => `<option value="${n.replace(/"/g, '&quot;')}"></option>`).join('');
             document.getElementById('teamOptions').innerHTML = html;
@@ -329,11 +440,12 @@
         }
     }
 
+    // --- Клики по слоям/счёту ---
     document.querySelectorAll('.layer, .score').forEach(el => {
         if (el.dataset.id !== '99') {
             el.style.pointerEvents = 'auto';
             el.style.cursor = 'pointer';
-            
+
             el.addEventListener('click', (e) => {
                 e.preventDefault();
                 document.querySelectorAll('.layer, .score').forEach(l => {
@@ -359,7 +471,7 @@
                     input.placeholder = "Введите текст...";
                     input.removeAttribute('list');
                 }
-                
+
                 input.value = '';
                 input.focus();
             });
@@ -406,36 +518,379 @@
         }
     });
 
-    // --- АДАПТАЦИЯ ХОЛСТА ---
-    function fitPreview() {
-        const preview = document.getElementById('preview');
-        const board = document.getElementById('board');
-        if (!preview || !board) return;
-        
-        // Получаем реальную ширину превью в CSS-пикселях
-        const rect = preview.getBoundingClientRect();
-        const k = rect.width / 1000;
-        
-        // Применяем масштаб к внутреннему холсту
-        board.style.setProperty('--k', k);
-        board.style.transform = `scale(${k})`;
+    // --- ФОН ХОЛСТА: pan + zoom ---
+    const canvas = document.getElementById('bgCanvas');
+    const preview = document.getElementById('preview');
+    const zoomEl = document.getElementById('zoom');
+    const zoomOut = document.getElementById('zoomOut');
+    const bgUrl = document.getElementById('bgUrl');
+
+    const BG_SIZE = 1000;
+    const state = {
+        src: null,
+        img: null,
+        rot: 0,
+        flipH: false,
+        flipV: false,
+        view: { scale: 1, x: 0, y: 0 }
+    };
+
+    const imgW = e => e instanceof HTMLImageElement ? e.naturalWidth : e.width;
+    const imgH = e => e instanceof HTMLImageElement ? e.naturalHeight : e.height;
+
+    function fitScale() {
+        if (!state.img) return 1;
+        return Math.min(BG_SIZE / imgW(state.img), BG_SIZE / imgH(state.img));
     }
 
-    // Дебаунс на resize
+    function renderCanvas(size = BG_SIZE) {
+        if (!state.src) {
+            const ctx = canvas.getContext('2d');
+            if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+            return;
+        }
+        const k = size / BG_SIZE;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.clearRect(0, 0, size, size);
+        ctx.imageSmoothingQuality = 'high';
+        const { scale, x, y } = state.view;
+        ctx.drawImage(state.src, x * k, y * k, imgW(state.img) * scale * k, imgH(state.img) * scale * k);
+    }
+
+    function requestRender() {
+        if (!state.img) return;
+        const dpr = window.devicePixelRatio || 1;
+        const px = Math.round(preview.clientWidth * dpr);
+        renderCanvas(Math.max(300, Math.min(1400, px)));
+    }
+
+    function updateZoomUI() {
+        if (!state.img) {
+            zoomEl.value = '1';
+            zoomOut.textContent = '100%';
+            return;
+        }
+        const base = fitScale();
+        const rel = state.view.scale / base;
+        zoomEl.value = String(Math.min(5, Math.max(0.2, rel)));
+        zoomOut.textContent = Math.round(rel * 100) + '%';
+    }
+
+    function centerImage() {
+        if (!state.img) return;
+        const s = fitScale();
+        state.view = {
+            scale: s,
+            x: (BG_SIZE - imgW(state.img) * s) / 2,
+            y: (BG_SIZE - imgH(state.img) * s) / 2
+        };
+        updateZoomUI();
+    }
+
+    function fillImage() {
+        if (!state.img) return;
+        const s = Math.max(BG_SIZE / imgW(state.img), BG_SIZE / imgH(state.img));
+        state.view = {
+            scale: s,
+            x: (BG_SIZE - imgW(state.img) * s) / 2,
+            y: (BG_SIZE - imgH(state.img) * s) / 2
+        };
+        updateZoomUI();
+    }
+
+    function applyRotation() {
+        if (!state.img) return;
+        if (!state.rot && !state.flipH && !state.flipV) {
+            state.src = state.img;
+            return;
+        }
+        const w = imgW(state.img), h = imgH(state.img);
+        const swapped = state.rot % 2 === 1;
+        const c = document.createElement('canvas');
+        c.width = swapped ? h : w;
+        c.height = swapped ? w : h;
+        const ctx = c.getContext('2d');
+        ctx.translate(c.width / 2, c.height / 2);
+        ctx.rotate(state.rot * Math.PI / 2);
+        ctx.scale(state.flipH ? -1 : 1, state.flipV ? -1 : 1);
+        ctx.drawImage(state.img, -w / 2, -h / 2);
+        state.src = c;
+    }
+
+    function loadBackground(src, restoreView = false) {
+        if (!src) {
+            state.src = null;
+            state.img = null;
+            canvas.classList.remove('visible');
+            localStorage.removeItem('scene.bgUrl');
+            return;
+        }
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            state.img = img;
+            state.src = img;
+            state.rot = 0;
+            state.flipH = false;
+            state.flipV = false;
+            applyRotation();
+            canvas.classList.add('visible');
+            centerImage();
+            requestRender();
+            if (!restoreView && !src.startsWith('blob:')) {
+                localStorage.setItem('scene.bgUrl', src);
+            }
+        };
+        img.onerror = () => showToast('Не удалось загрузить картинку');
+        img.src = src;
+    }
+
+    // --- жесты ---
+    const pointers = new Map();
+    let gesture = null;
+
+    function clientToBoard(clientX, clientY) {
+        const r = canvas.getBoundingClientRect();
+        return {
+            x: (clientX - r.left) / r.width * BG_SIZE,
+            y: (clientY - r.top) / r.height * BG_SIZE
+        };
+    }
+
+    function startGesture() {
+        const list = [...pointers.values()];
+        const [a, b] = list;
+        const mid = clientToBoard(
+            list.reduce((s, p) => s + p.x, 0) / list.length,
+            list.reduce((s, p) => s + p.y, 0) / list.length
+        );
+        gesture = {
+            view: { ...state.view },
+            mid,
+            dist: a && b ? Math.hypot(a.x - b.x, a.y - b.y) || 1 : 1
+        };
+    }
+
+    function zoomAt(targetScale, cx, cy) {
+        const base = fitScale();
+        const minS = base * 0.2;
+        const maxS = base * 8;
+        const s = Math.min(maxS, Math.max(minS, targetScale));
+        const ratio = s / state.view.scale;
+        state.view = {
+            scale: s,
+            x: cx - (cx - state.view.x) * ratio,
+            y: cy - (cy - state.view.y) * ratio
+        };
+        updateZoomUI();
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+        if (!state.img) return;
+        canvas.setPointerCapture(e.pointerId);
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        canvas.classList.add('dragging');
+        startGesture();
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+        if (!pointers.has(e.pointerId) || !gesture) return;
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        const [a, b] = [...pointers.values()];
+        if (a && b) {
+            const dist = Math.hypot(a.x - b.x, a.y - b.y);
+            state.view = { ...gesture.view };
+            zoomAt(gesture.view.scale * (dist / gesture.dist), gesture.mid.x, gesture.mid.y);
+            const delta = clientToBoard((a.x + b.x) / 2, (a.y + b.y) / 2);
+            state.view.x += delta.x - gesture.mid.x;
+            state.view.y += delta.y - gesture.mid.y;
+        } else if (a) {
+            const p = clientToBoard(a.x, a.y);
+            state.view = {
+                ...gesture.view,
+                x: gesture.view.x + p.x - gesture.mid.x,
+                y: gesture.view.y + p.y - gesture.mid.y
+            };
+        }
+        requestRender();
+    });
+
+    function endPointer(e) {
+        pointers.delete(e.pointerId);
+        if (pointers.size) return startGesture();
+        gesture = null;
+        canvas.classList.remove('dragging');
+    }
+    canvas.addEventListener('pointerup', endPointer);
+    canvas.addEventListener('pointercancel', endPointer);
+
+    canvas.addEventListener('wheel', (e) => {
+        if (!state.img) return;
+        e.preventDefault();
+        const p = clientToBoard(e.clientX, e.clientY);
+        zoomAt(state.view.scale * Math.exp(-e.deltaY * 0.0015), p.x, p.y);
+        requestRender();
+    }, { passive: false });
+
+    // --- кнопки фона ---
+    document.getElementById('applyBgUrl').onclick = () => {
+        const v = bgUrl.value.trim();
+        if (v) loadBackground(v);
+    };
+    bgUrl.addEventListener('keydown', e => e.key === 'Enter' && document.getElementById('applyBgUrl').click());
+
+    document.getElementById('bgFile').onchange = (e) => {
+        const f = e.target.files?.[0];
+        if (!f) return;
+        if (!f.type.startsWith('image/')) return showToast('Это не изображение');
+        loadBackground(URL.createObjectURL(f));
+        e.target.value = '';
+    };
+
+    document.getElementById('clearBg').onclick = () => {
+        bgUrl.value = '';
+        loadBackground('');
+    };
+
+    document.getElementById('fillBg').onclick = () => { fillImage(); requestRender(); };
+    document.getElementById('centerBg').onclick = () => { centerImage(); requestRender(); };
+    document.getElementById('rotL').onclick = () => { state.rot = (state.rot - 1 + 4) % 4; applyRotation(); centerImage(); requestRender(); };
+    document.getElementById('rotR').onclick = () => { state.rot = (state.rot + 1) % 4; applyRotation(); centerImage(); requestRender(); };
+    document.getElementById('flipH').onclick = () => { state.flipH = !state.flipH; applyRotation(); centerImage(); requestRender(); };
+    document.getElementById('flipV').onclick = () => { state.flipV = !state.flipV; applyRotation(); centerImage(); requestRender(); };
+
+    zoomEl.oninput = () => {
+        const base = fitScale();
+        zoomAt(base * parseFloat(zoomEl.value), BG_SIZE / 2, BG_SIZE / 2);
+        requestRender();
+    };
+
+    new ResizeObserver(() => requestRender()).observe(preview);
+
+    // восстановление URL из localStorage
+    const savedBg = localStorage.getItem('scene.bgUrl');
+    if (savedBg) {
+        bgUrl.value = savedBg;
+        loadBackground(savedBg, true);
+    }
+
+    // --- СКАЧИВАНИЕ / ПОДЕЛИТЬСЯ ---
+    async function captureScene() {
+        const prevOutlines = [];
+        document.querySelectorAll('.layer, .score').forEach(el => {
+            prevOutlines.push(el.style.outline);
+            el.style.outline = 'none';
+        });
+
+        // отрисовать фон в полном разрешении
+        if (state.src) renderCanvas(1000);
+
+        const board = document.getElementById('board');
+        const clone = board.cloneNode(true);
+        clone.style.transform = 'none';
+        clone.style.position = 'fixed';
+        clone.style.left = '-99999px';
+        clone.style.top = '0';
+        clone.style.width = '1000px';
+        clone.style.height = '1000px';
+        clone.style.setProperty('--k', '1');
+        document.body.appendChild(clone);
+
+        try {
+            return await html2canvas(clone, {
+                width: 1000,
+                height: 1000,
+                scale: 2,
+                backgroundColor: null,
+                useCORS: true,
+                allowTaint: true,
+                logging: false
+            });
+        } finally {
+            document.body.removeChild(clone);
+            document.querySelectorAll('.layer, .score').forEach((el, i) => {
+                el.style.outline = prevOutlines[i] || '';
+            });
+            // вернуть фон в экранный размер
+            requestRender();
+        }
+    }
+
+    document.getElementById('btnDownload').addEventListener('click', async () => {
+        try {
+            showToast('Готовим изображение...');
+            const canvasEl = await captureScene();
+            const link = document.createElement('a');
+            const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+            link.download = `scene-${ts}.png`;
+            link.href = canvasEl.toDataURL('image/png');
+            link.click();
+            showToast('Скачано');
+        } catch (err) {
+            console.error(err);
+            showToast('Не удалось сохранить: ' + err.message);
+        }
+    });
+
+    document.getElementById('btnShare').addEventListener('click', async () => {
+        try {
+            showToast('Готовим изображение...');
+            const canvasEl = await captureScene();
+            const dataUrl = canvasEl.toDataURL('image/png');
+            const blob = await (await fetch(dataUrl)).blob();
+            const file = new File([blob], 'scene.png', { type: 'image/png' });
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file], title: 'Сцена', text: 'Сцена матча' });
+                showToast('Отправлено');
+            } else if (navigator.share) {
+                await navigator.share({ title: 'Сцена', text: 'Сцена матча' });
+                showToast('Отправлено');
+            } else {
+                try {
+                    await navigator.clipboard.writeText(dataUrl);
+                    showToast('Изображение скопировано (dataURL)');
+                } catch {
+                    const link = document.createElement('a');
+                    link.download = 'scene.png';
+                    link.href = dataUrl;
+                    link.click();
+                    showToast('Скачано (share не поддерживается)');
+                }
+            }
+        } catch (err) {
+            console.error(err);
+            if (err.name === 'AbortError') return;
+            showToast('Не удалось поделиться: ' + err.message);
+        }
+    });
+
+    // --- АДАПТАЦИЯ ХОЛСТА ---
+    function fitPreview() {
+        const previewEl = document.getElementById('preview');
+        const board = document.getElementById('board');
+        if (!previewEl || !board) return;
+        const rect = previewEl.getBoundingClientRect();
+        const k = rect.width / 1000;
+        board.style.setProperty('--k', k);
+        board.style.transform = `scale(${k})`;
+        requestRender();
+    }
+
     let resizeTimer;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(fitPreview, 50);
     });
 
-    // ResizeObserver для мгновенной реакции на изменение размера превью
     if (window.ResizeObserver) {
         new ResizeObserver(fitPreview).observe(document.getElementById('preview'));
     }
 
-    // Запуск после загрузки
     window.addEventListener('load', fitPreview);
-    // И сразу при инициализации (на случай, если load уже прошёл)
     fitPreview();
 
     loadTeams();
