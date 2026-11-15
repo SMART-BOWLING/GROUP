@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ru"><head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Шаблон сцены</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
@@ -9,18 +9,22 @@
 <style>
     :root { --color-field: #f2f2f7; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { color-scheme: light; width: 100%; }
+    html { color-scheme: light; width: 100%; -webkit-text-size-adjust: 100%; }
     body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         background-color: var(--color-field);
         display: flex; flex-direction: column; align-items: center;
         padding: 20px 16px; min-height: 100vh; gap: 12px;
+        overflow-x: hidden;
+        touch-action: pan-y;
     }
     .preview {
         aspect-ratio: 1 / 1;
         width: 100%; max-width: 521px;
         position: relative; overflow: hidden;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        flex-shrink: 0;
+        contain: layout size;
     }
     .board {
         --k: 0.521;
@@ -30,6 +34,8 @@
         position: absolute; top: 0; left: 0; overflow: hidden;
         background: linear-gradient(135deg, #3a4044, #1f2327);
         touch-action: none; user-select: none;
+        will-change: transform;
+        transform-style: preserve-3d;
     }
     .layer {
         position: absolute; top: 0; left: 0;
@@ -229,7 +235,7 @@
         <div class="layer" data-id="157" style="width: 51px; height: 51px; left: 906.5px; top: 453.5px; z-index: 59;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <!-- Узкие пары 45×45 -->
-        <!-- Зелёные (без изменений) -->
+        <!-- Зелёные -->
         <div class="layer" data-id="168" style="width: 45px; height: 45px; left: 639.5px; top: 245.5px; z-index: 70;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
         <div class="layer" data-id="169" style="width: 45px; height: 45px; left: 696.5px; top: 245.5px; z-index: 71;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
         <span class="score score-light" data-type="score" style="left: 691px; top: 226px;">3:0</span>
@@ -244,7 +250,7 @@
         <span class="score score-light" data-type="score" style="left: 883.5px; top: 335px;">3:2</span>
         <div class="layer" data-id="177b" style="width: 45px; height: 45px; left: 904.5px; top: 354.5px; z-index: 81;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
-        <!-- Красные (без изменений) -->
+        <!-- Красные -->
         <div class="layer" data-id="166" style="width: 45px; height: 45px; left: 639.5px; top: 810.5px; z-index: 68;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
         <span class="score score-light" data-type="score" style="left: 691px; top: 875px;">0:3</span>
         <div class="layer" data-id="167" style="width: 45px; height: 45px; left: 696.5px; top: 810.5px; z-index: 69;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
@@ -261,7 +267,6 @@
     </div>
 </div>
 
-<!-- Поле ввода снизу, без кнопки -->
 <div class="team-input-bar">
     <div class="input-wrapper">
         <label id="inputLabel">Выберите элемент на сцене</label>
@@ -271,14 +276,13 @@
 </div>
 
 <script>
-    // --- КОНФИГ И ЗАГРУЗКА ТАБЛИЦЫ ---
     const API_URL = "https://script.google.com/macros/s/AKfycbxJZEfppSo6QZpmpiEDR1FaOpIjHdfQDXdj-x80uoIy-SU30nKgIgfvr3DNgQbroi53/exec";
     const SHEET_ID = "188jMHUJs1KkmCAzG7XZYTnTY9SnNIx0JlXJoEdMTees";
     const teamsMap = new Map();
     
     let activeElement = null; 
     let activeType = null;    
-    let applyTimer = null; // Таймер для дебаунса
+    let applyTimer = null;
 
     async function fetchSheet(sheetName) {
         const url = new URL(API_URL);
@@ -309,8 +313,6 @@
         }
     }
 
-    // --- ЛОГИКА ВЫБОРА ---
-    
     document.querySelectorAll('.layer, .score').forEach(el => {
         if (el.dataset.id !== '99') {
             el.style.pointerEvents = 'auto';
@@ -342,18 +344,17 @@
                     input.removeAttribute('list');
                 }
                 
-                input.value = ''; // Очищаем поле при новом клике
+                input.value = '';
                 input.focus();
             });
         }
     });
 
-    // --- ПРИМЕНЕНИЕ БЕЗ КНОПКИ ---
     function applyValue() {
         if (!activeElement) return;
         const input = document.getElementById('mainInput');
         const value = input.value.trim();
-        if (!value) return; // Если пусто, ничего не делаем
+        if (!value) return;
 
         if (activeType === 'logo') {
             const team = teamsMap.get(value.toLowerCase());
@@ -368,22 +369,18 @@
 
     const inputEl = document.getElementById('mainInput');
 
-    // При вводе с задержкой (дебаунс) чтобы не нагружать при каждом символе
     inputEl.addEventListener('input', () => {
         clearTimeout(applyTimer);
         applyTimer = setTimeout(applyValue, 300);
     });
 
-    // Мгновенно при выборе из подсказок (datalist)
     inputEl.addEventListener('change', applyValue);
 
-    // Мгновенно при нажатии Enter
     inputEl.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             clearTimeout(applyTimer);
             applyValue();
-            // Снимаем выделение после применения
             if (activeElement) activeElement.style.outline = 'none';
             activeElement = null;
             activeType = null;
@@ -392,6 +389,29 @@
             document.getElementById('inputLabel').textContent = "Выберите элемент на сцене";
         }
     });
+
+    // --- АДАПТАЦИЯ ХОЛСТА ---
+    function fitPreview() {
+        const preview = document.getElementById('preview');
+        const board = document.getElementById('board');
+        if (!preview || !board) return;
+        
+        const rect = preview.getBoundingClientRect();
+        const k = rect.width / 1000;
+        board.style.setProperty('--k', k);
+    }
+
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(fitPreview, 100);
+    });
+
+    if (window.ResizeObserver) {
+        new ResizeObserver(fitPreview).observe(document.getElementById('preview'));
+    }
+
+    window.addEventListener('load', fitPreview);
 
     loadTeams();
 </script>
