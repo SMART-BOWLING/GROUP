@@ -36,6 +36,7 @@
         transform-origin: 0 0;
         pointer-events: none;
         will-change: transform;
+        transition: outline 0.1s ease;
     }
     .layer img {
         display: block; width: 100%; height: 100%;
@@ -58,8 +59,30 @@
         pointer-events: none;
         user-select: none;
         white-space: nowrap;
+        transition: outline 0.1s ease;
     }
     .score-light { color: #ffffff; }
+
+    .team-input-bar {
+        display: flex; gap: 8px; width: 100%; max-width: 521px;
+        background: #fff; padding: 12px; border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        align-items: center;
+    }
+    .team-input-bar .input-wrapper {
+        flex: 1; display: flex; flex-direction: column;
+    }
+    .team-input-bar label {
+        font-size: 12px; font-weight: 600; color: #888; margin-bottom: 4px; display: none;
+    }
+    .team-input-bar label.active {
+        display: block; color: #9a5cf8;
+    }
+    .team-input-bar input {
+        width: 100%; padding: 10px 14px; border: 1px solid #ddd;
+        border-radius: 8px; font-family: inherit; font-size: 15px; outline: none;
+    }
+    .team-input-bar input:focus { border-color: #9a5cf8; }
 </style>
 </head>
 <body>
@@ -70,177 +93,308 @@
 
         <!-- Колонка 37.5 / 137.5 -->
         <div class="layer" data-id="100" style="width: 51px; height: 51px; left: 37.5px; top: 271.5px; z-index: 2;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 114px; top: 297px;">0:0</span>
+        <span class="score" data-type="score" style="left: 114px; top: 297px;">0:0</span>
         <div class="layer" data-id="101" style="width: 51px; height: 51px; left: 137.5px; top: 271.5px; z-index: 3;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="102" style="width: 51px; height: 51px; left: 37.5px; top: 343.5px; z-index: 4;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 114px; top: 369px;">0:0</span>
+        <span class="score" data-type="score" style="left: 114px; top: 369px;">0:0</span>
         <div class="layer" data-id="103" style="width: 51px; height: 51px; left: 137.5px; top: 344.5px; z-index: 5;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="104" style="width: 51px; height: 51px; left: 37.5px; top: 415.5px; z-index: 6;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 114px; top: 441px;">0:0</span>
+        <span class="score" data-type="score" style="left: 114px; top: 441px;">0:0</span>
         <div class="layer" data-id="105" style="width: 51px; height: 51px; left: 137.5px; top: 414.5px; z-index: 7;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="106" style="width: 51px; height: 51px; left: 37.5px; top: 487.5px; z-index: 8;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 114px; top: 513px;">0:0</span>
+        <span class="score" data-type="score" style="left: 114px; top: 513px;">0:0</span>
         <div class="layer" data-id="107" style="width: 51px; height: 51px; left: 137.5px; top: 486.5px; z-index: 9;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="108" style="width: 51px; height: 51px; left: 37.5px; top: 560.5px; z-index: 10;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 114px; top: 586px;">0:0</span>
+        <span class="score" data-type="score" style="left: 114px; top: 586px;">0:0</span>
         <div class="layer" data-id="109" style="width: 51px; height: 51px; left: 137.5px; top: 560.5px; z-index: 11;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="110" style="width: 51px; height: 51px; left: 37.5px; top: 632.5px; z-index: 12;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 114px; top: 658px;">0:0</span>
+        <span class="score" data-type="score" style="left: 114px; top: 658px;">0:0</span>
         <div class="layer" data-id="111" style="width: 51px; height: 51px; left: 137.5px; top: 632.5px; z-index: 13;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="112" style="width: 51px; height: 51px; left: 37.5px; top: 704.5px; z-index: 14;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 114px; top: 730px;">0:0</span>
+        <span class="score" data-type="score" style="left: 114px; top: 730px;">0:0</span>
         <div class="layer" data-id="113" style="width: 51px; height: 51px; left: 137.5px; top: 704.5px; z-index: 15;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="114" style="width: 51px; height: 51px; left: 37.5px; top: 776.5px; z-index: 16;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 114px; top: 802px;">0:0</span>
+        <span class="score" data-type="score" style="left: 114px; top: 802px;">0:0</span>
         <div class="layer" data-id="115" style="width: 51px; height: 51px; left: 137.5px; top: 776.5px; z-index: 17;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <!-- Колонка 230.5 / 328.5 -->
         <div class="layer" data-id="116" style="width: 51px; height: 51px; left: 230.5px; top: 803.5px; z-index: 18;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 307px; top: 829px;">0:0</span>
+        <span class="score" data-type="score" style="left: 307px; top: 829px;">0:0</span>
         <div class="layer" data-id="117" style="width: 51px; height: 51px; left: 328.5px; top: 803.5px; z-index: 19;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="118" style="width: 51px; height: 51px; left: 230.5px; top: 731.5px; z-index: 20;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 307px; top: 757px;">0:0</span>
+        <span class="score" data-type="score" style="left: 307px; top: 757px;">0:0</span>
         <div class="layer" data-id="119" style="width: 51px; height: 51px; left: 328.5px; top: 731.5px; z-index: 21;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="120" style="width: 51px; height: 51px; left: 230.5px; top: 658.5px; z-index: 22;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 307px; top: 684px;">0:0</span>
+        <span class="score" data-type="score" style="left: 307px; top: 684px;">0:0</span>
         <div class="layer" data-id="121" style="width: 51px; height: 51px; left: 329.5px; top: 658.5px; z-index: 23;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="122" style="width: 51px; height: 51px; left: 230.5px; top: 585.5px; z-index: 24;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 307px; top: 611px;">0:0</span>
+        <span class="score" data-type="score" style="left: 307px; top: 611px;">0:0</span>
         <div class="layer" data-id="123" style="width: 51px; height: 51px; left: 329.5px; top: 586.5px; z-index: 25;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="132" style="width: 51px; height: 51px; left: 230.5px; top: 463.5px; z-index: 34;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 307px; top: 489px;">0:0</span>
+        <span class="score" data-type="score" style="left: 307px; top: 489px;">0:0</span>
         <div class="layer" data-id="133" style="width: 51px; height: 51px; left: 328.5px; top: 463.5px; z-index: 35;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="134" style="width: 51px; height: 51px; left: 230.5px; top: 391.5px; z-index: 36;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 307px; top: 417px;">0:0</span>
+        <span class="score" data-type="score" style="left: 307px; top: 417px;">0:0</span>
         <div class="layer" data-id="135" style="width: 51px; height: 51px; left: 328.5px; top: 391.5px; z-index: 37;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="136" style="width: 51px; height: 51px; left: 230.5px; top: 318.5px; z-index: 38;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 307px; top: 344px;">0:0</span>
+        <span class="score" data-type="score" style="left: 307px; top: 344px;">0:0</span>
         <div class="layer" data-id="137" style="width: 51px; height: 51px; left: 329.5px; top: 318.5px; z-index: 39;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="138" style="width: 51px; height: 51px; left: 230.5px; top: 245.5px; z-index: 40;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 307px; top: 271px;">0:0</span>
+        <span class="score" data-type="score" style="left: 307px; top: 271px;">0:0</span>
         <div class="layer" data-id="139" style="width: 51px; height: 51px; left: 329.5px; top: 246.5px; z-index: 41;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <!-- Колонка 421.5 / 520.5 -->
         <div class="layer" data-id="124" style="width: 51px; height: 51px; left: 422.5px; top: 633.5px; z-index: 26;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 498px; top: 659px;">0:0</span>
+        <span class="score" data-type="score" style="left: 498px; top: 659px;">0:0</span>
         <div class="layer" data-id="125" style="width: 51px; height: 51px; left: 520.5px; top: 633.5px; z-index: 27;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="126" style="width: 51px; height: 51px; left: 422.5px; top: 561.5px; z-index: 28;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 498px; top: 587px;">0:0</span>
+        <span class="score" data-type="score" style="left: 498px; top: 587px;">0:0</span>
         <div class="layer" data-id="127" style="width: 51px; height: 51px; left: 520.5px; top: 561.5px; z-index: 29;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="128" style="width: 51px; height: 51px; left: 422.5px; top: 488.5px; z-index: 30;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 498px; top: 514px;">0:0</span>
+        <span class="score" data-type="score" style="left: 498px; top: 514px;">0:0</span>
         <div class="layer" data-id="129" style="width: 51px; height: 51px; left: 521.5px; top: 488.5px; z-index: 31;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="130" style="width: 51px; height: 51px; left: 422.5px; top: 415.5px; z-index: 32;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 498px; top: 441px;">0:0</span>
+        <span class="score" data-type="score" style="left: 498px; top: 441px;">0:0</span>
         <div class="layer" data-id="131" style="width: 51px; height: 51px; left: 521.5px; top: 416.5px; z-index: 33;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="158" style="width: 51px; height: 51px; left: 421.5px; top: 318.5px; z-index: 60;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 498px; top: 344px;">0:0</span>
+        <span class="score" data-type="score" style="left: 498px; top: 344px;">0:0</span>
         <div class="layer" data-id="159" style="width: 51px; height: 51px; left: 520.5px; top: 318.5px; z-index: 61;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="160" style="width: 51px; height: 51px; left: 421.5px; top: 245.5px; z-index: 62;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 498px; top: 271px;">0:0</span>
+        <span class="score" data-type="score" style="left: 498px; top: 271px;">0:0</span>
         <div class="layer" data-id="161" style="width: 51px; height: 51px; left: 520.5px; top: 246.5px; z-index: 63;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="162" style="width: 51px; height: 51px; left: 421.5px; top: 803.5px; z-index: 64;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 498px; top: 829px;">0:0</span>
+        <span class="score" data-type="score" style="left: 498px; top: 829px;">0:0</span>
         <div class="layer" data-id="163" style="width: 51px; height: 51px; left: 520.5px; top: 803.5px; z-index: 65;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="164" style="width: 51px; height: 51px; left: 421.5px; top: 730.5px; z-index: 66;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 498px; top: 756px;">0:0</span>
+        <span class="score" data-type="score" style="left: 498px; top: 756px;">0:0</span>
         <div class="layer" data-id="165" style="width: 51px; height: 51px; left: 520.5px; top: 731.5px; z-index: 67;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <!-- Колонка 614.5 / 713.5 -->
         <div class="layer" data-id="140" style="width: 51px; height: 51px; left: 614.5px; top: 463.5px; z-index: 42;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 691px; top: 489px;">0:0</span>
+        <span class="score" data-type="score" style="left: 691px; top: 489px;">0:0</span>
         <div class="layer" data-id="141" style="width: 51px; height: 51px; left: 712.5px; top: 463.5px; z-index: 43;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="142" style="width: 51px; height: 51px; left: 614.5px; top: 390.5px; z-index: 44;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 691px; top: 416px;">0:0</span>
+        <span class="score" data-type="score" style="left: 691px; top: 416px;">0:0</span>
         <div class="layer" data-id="143" style="width: 51px; height: 51px; left: 713.5px; top: 390.5px; z-index: 45;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="144" style="width: 51px; height: 51px; left: 614.5px; top: 317.5px; z-index: 46;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 691px; top: 343px;">0:0</span>
+        <span class="score" data-type="score" style="left: 691px; top: 343px;">0:0</span>
         <div class="layer" data-id="145" style="width: 51px; height: 51px; left: 713.5px; top: 318.5px; z-index: 47;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="146" style="width: 51px; height: 51px; left: 614.5px; top: 730.5px; z-index: 48;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 691px; top: 756px;">0:0</span>
+        <span class="score" data-type="score" style="left: 691px; top: 756px;">0:0</span>
         <div class="layer" data-id="147" style="width: 51px; height: 51px; left: 712.5px; top: 730.5px; z-index: 49;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="148" style="width: 51px; height: 51px; left: 614.5px; top: 657.5px; z-index: 50;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 691px; top: 683px;">0:0</span>
+        <span class="score" data-type="score" style="left: 691px; top: 683px;">0:0</span>
         <div class="layer" data-id="149" style="width: 51px; height: 51px; left: 713.5px; top: 657.5px; z-index: 51;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="150" style="width: 51px; height: 51px; left: 614.5px; top: 584.5px; z-index: 52;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 691px; top: 610px;">0:0</span>
+        <span class="score" data-type="score" style="left: 691px; top: 610px;">0:0</span>
         <div class="layer" data-id="151" style="width: 51px; height: 51px; left: 713.5px; top: 585.5px; z-index: 53;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <!-- Колонка 807.5 / 906.5 -->
         <div class="layer" data-id="152" style="width: 51px; height: 51px; left: 807.5px; top: 598.5px; z-index: 54;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 884px; top: 624px;">0:0</span>
+        <span class="score" data-type="score" style="left: 884px; top: 624px;">0:0</span>
         <div class="layer" data-id="153" style="width: 51px; height: 51px; left: 905.5px; top: 598.5px; z-index: 55;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="154" style="width: 51px; height: 51px; left: 807.5px; top: 525.5px; z-index: 56;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 884px; top: 551px;">0:0</span>
+        <span class="score" data-type="score" style="left: 884px; top: 551px;">0:0</span>
         <div class="layer" data-id="155" style="width: 51px; height: 51px; left: 906.5px; top: 525.5px; z-index: 57;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="156" style="width: 51px; height: 51px; left: 807.5px; top: 452.5px; z-index: 58;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score" style="left: 884px; top: 478px;">0:0</span>
+        <span class="score" data-type="score" style="left: 884px; top: 478px;">0:0</span>
         <div class="layer" data-id="157" style="width: 51px; height: 51px; left: 906.5px; top: 453.5px; z-index: 59;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <!-- Узкие пары 45×45 -->
         <!-- Зелёные (без изменений) -->
         <div class="layer" data-id="168" style="width: 45px; height: 45px; left: 639.5px; top: 245.5px; z-index: 70;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
         <div class="layer" data-id="169" style="width: 45px; height: 45px; left: 696.5px; top: 245.5px; z-index: 71;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score score-light" style="left: 691px; top: 226px;">3:0</span>
+        <span class="score score-light" data-type="score" style="left: 691px; top: 226px;">3:0</span>
 
         <div class="layer" data-id="174" style="width: 45px; height: 45px; left: 814.5px; top: 245.5px; z-index: 76;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
         <div class="layer" data-id="175" style="width: 45px; height: 45px; left: 859.5px; top: 245.5px; z-index: 77;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score score-light" style="left: 883.5px; top: 226px;">3:1</span>
+        <span class="score score-light" data-type="score" style="left: 883.5px; top: 226px;">3:1</span>
         <div class="layer" data-id="175b" style="width: 45px; height: 45px; left: 904.5px; top: 245.5px; z-index: 78;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
         <div class="layer" data-id="176" style="width: 45px; height: 45px; left: 814.5px; top: 354.5px; z-index: 79;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
         <div class="layer" data-id="177" style="width: 45px; height: 45px; left: 859.5px; top: 354.5px; z-index: 80;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score score-light" style="left: 883.5px; top: 335px;">3:2</span>
+        <span class="score score-light" data-type="score" style="left: 883.5px; top: 335px;">3:2</span>
         <div class="layer" data-id="177b" style="width: 45px; height: 45px; left: 904.5px; top: 354.5px; z-index: 81;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
-        <!-- Красные — текст внизу под логотипами, новые счета -->
-        
-        <!-- Нижняя левая (2 иконки) — 0:3 -->
+        <!-- Красные (без изменений) -->
         <div class="layer" data-id="166" style="width: 45px; height: 45px; left: 639.5px; top: 810.5px; z-index: 68;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score score-light" style="left: 691px; top: 875px;">0:3</span>
+        <span class="score score-light" data-type="score" style="left: 691px; top: 875px;">0:3</span>
         <div class="layer" data-id="167" style="width: 45px; height: 45px; left: 696.5px; top: 810.5px; z-index: 69;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
-        <!-- Нижняя правая верхняя (3 иконки, текст внизу) — 1:3 -->
         <div class="layer" data-id="170" style="width: 45px; height: 45px; left: 814.5px; top: 810.5px; z-index: 72;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
         <div class="layer" data-id="171" style="width: 45px; height: 45px; left: 859.5px; top: 810.5px; z-index: 73;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score score-light" style="left: 883.5px; top: 875px;">1:3</span>
+        <span class="score score-light" data-type="score" style="left: 883.5px; top: 875px;">1:3</span>
         <div class="layer" data-id="171b" style="width: 45px; height: 45px; left: 904.5px; top: 810.5px; z-index: 82;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
 
-        <!-- Нижняя правая средняя (3 иконки, текст внизу) — 2:3 -->
         <div class="layer" data-id="172" style="width: 45px; height: 45px; left: 814.5px; top: 699.5px; z-index: 74;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
         <div class="layer" data-id="173" style="width: 45px; height: 45px; left: 859.5px; top: 699.5px; z-index: 75;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
-        <span class="score score-light" style="left: 883.5px; top: 764px;">2:3</span>
+        <span class="score score-light" data-type="score" style="left: 883.5px; top: 764px;">2:3</span>
         <div class="layer" data-id="173b" style="width: 45px; height: 45px; left: 904.5px; top: 699.5px; z-index: 83;"><div class="clip"><img draggable="false" alt="" src="https://res.cloudinary.com/dplmdnxvk/image/upload/v1793443302/kayp8skyu1v6fup7viws.png"></div></div>
     </div>
 </div>
+
+<!-- Поле ввода снизу, без кнопки -->
+<div class="team-input-bar">
+    <div class="input-wrapper">
+        <label id="inputLabel">Выберите элемент на сцене</label>
+        <input type="text" id="mainInput" list="teamOptions" placeholder="Введите название или текст..." autocomplete="off">
+        <datalist id="teamOptions"></datalist>
+    </div>
+</div>
+
+<script>
+    // --- КОНФИГ И ЗАГРУЗКА ТАБЛИЦЫ ---
+    const API_URL = "https://script.google.com/macros/s/AKfycbxJZEfppSo6QZpmpiEDR1FaOpIjHdfQDXdj-x80uoIy-SU30nKgIgfvr3DNgQbroi53/exec";
+    const SHEET_ID = "188jMHUJs1KkmCAzG7XZYTnTY9SnNIx0JlXJoEdMTees";
+    const teamsMap = new Map();
+    
+    let activeElement = null; 
+    let activeType = null;    
+    let applyTimer = null; // Таймер для дебаунса
+
+    async function fetchSheet(sheetName) {
+        const url = new URL(API_URL);
+        url.searchParams.set("sheetId", SHEET_ID);
+        url.searchParams.set("sheetName", sheetName);
+        const res = await fetch(url);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || "Ошибка API");
+        return json.data;
+    }
+
+    async function loadTeams() {
+        try {
+            const data = await fetchSheet("TEAMS");
+            data.slice(1).forEach(row => {
+                const name = row[1] ? String(row[1]).trim() : "";
+                const logo = row[4] ? String(row[4]).trim() : "";
+                if (name) teamsMap.set(name.toLowerCase(), { name, logo });
+            });
+            
+            const names = Array.from(teamsMap.values()).map(t => t.name).sort((a, b) => a.localeCompare(b));
+            const html = names.map(n => `<option value="${n.replace(/"/g, '&quot;')}"></option>`).join('');
+            document.getElementById('teamOptions').innerHTML = html;
+            console.log("Команды загружены:", teamsMap.size);
+        } catch (e) {
+            console.error("Ошибка загрузки команд:", e);
+            alert("Не удалось загрузить базу команд: " + e.message);
+        }
+    }
+
+    // --- ЛОГИКА ВЫБОРА ---
+    
+    document.querySelectorAll('.layer, .score').forEach(el => {
+        if (el.dataset.id !== '99') {
+            el.style.pointerEvents = 'auto';
+            el.style.cursor = 'pointer';
+            
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.layer, .score').forEach(l => {
+                    l.style.outline = 'none';
+                });
+
+                const type = el.classList.contains('score') ? 'text' : 'logo';
+                const label = document.getElementById('inputLabel');
+                const input = document.getElementById('mainInput');
+
+                el.style.outline = '3px solid #9a5cf8';
+                activeElement = el;
+                activeType = type;
+
+                if (type === 'logo') {
+                    label.textContent = "Поиск команды (Логотип)";
+                    label.className = "active";
+                    input.placeholder = "Введите название команды...";
+                    input.setAttribute('list', 'teamOptions');
+                } else {
+                    label.textContent = "Ввод текста (Счет/Название)";
+                    label.className = "active";
+                    input.placeholder = "Введите текст...";
+                    input.removeAttribute('list');
+                }
+                
+                input.value = ''; // Очищаем поле при новом клике
+                input.focus();
+            });
+        }
+    });
+
+    // --- ПРИМЕНЕНИЕ БЕЗ КНОПКИ ---
+    function applyValue() {
+        if (!activeElement) return;
+        const input = document.getElementById('mainInput');
+        const value = input.value.trim();
+        if (!value) return; // Если пусто, ничего не делаем
+
+        if (activeType === 'logo') {
+            const team = teamsMap.get(value.toLowerCase());
+            if (team && team.logo) {
+                const img = activeElement.querySelector('img');
+                if (img) img.src = team.logo;
+            }
+        } else if (activeType === 'text') {
+            activeElement.textContent = value;
+        }
+    }
+
+    const inputEl = document.getElementById('mainInput');
+
+    // При вводе с задержкой (дебаунс) чтобы не нагружать при каждом символе
+    inputEl.addEventListener('input', () => {
+        clearTimeout(applyTimer);
+        applyTimer = setTimeout(applyValue, 300);
+    });
+
+    // Мгновенно при выборе из подсказок (datalist)
+    inputEl.addEventListener('change', applyValue);
+
+    // Мгновенно при нажатии Enter
+    inputEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            clearTimeout(applyTimer);
+            applyValue();
+            // Снимаем выделение после применения
+            if (activeElement) activeElement.style.outline = 'none';
+            activeElement = null;
+            activeType = null;
+            inputEl.value = '';
+            document.getElementById('inputLabel').className = "";
+            document.getElementById('inputLabel').textContent = "Выберите элемент на сцене";
+        }
+    });
+
+    loadTeams();
+</script>
 
 </body>
 </html>
