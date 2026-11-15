@@ -125,9 +125,6 @@
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
     .bg-panel .row { display: flex; align-items: center; gap: 8px; }
-    .bg-panel .row span { min-width: 92px; font-size: 14px; color: var(--color-ink); }
-    .bg-panel input[type=range] { flex: 1; accent-color: var(--color-navy); }
-    .bg-panel output { min-width: 52px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
     .bg-panel .btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
     .bg-panel input[type=text] {
         flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px;
@@ -360,11 +357,6 @@
         <label class="primary-btn">Файл<input type="file" id="bgFile" accept="image/*" hidden /></label>
         <button type="button" id="clearBg" class="secondary-btn">Сбросить фон</button>
     </div>
-    <div class="row">
-        <span>Масштаб</span>
-        <input type="range" id="zoom" min="0.2" max="5" step="0.01" value="1" />
-        <output id="zoomOut">100%</output>
-    </div>
     <p style="font-size:13px;color:#8e8e93;margin:0;">Фон можно двигать пальцем или мышью, масштаб — щипком или колесом.</p>
 </div>
 
@@ -557,8 +549,6 @@
     // --- ФОН ХОЛСТА: pan + zoom ---
     const canvas = document.getElementById('bgCanvas');
     const preview = document.getElementById('preview');
-    const zoomEl = document.getElementById('zoom');
-    const zoomOut = document.getElementById('zoomOut');
     const bgUrl = document.getElementById('bgUrl');
 
     const BG_SIZE = 1000;
@@ -581,7 +571,6 @@
         const v = store.get('view', null);
         if (v && typeof v.scale === 'number' && isFinite(v.scale)) {
             state.view = { scale: v.scale, x: v.x || 0, y: v.y || 0 };
-            updateZoomUI();
             requestRender();
             return true;
         }
@@ -617,18 +606,6 @@
         renderCanvas(Math.max(300, Math.min(1400, px)));
     }
 
-    function updateZoomUI() {
-        if (!state.img) {
-            zoomEl.value = '1';
-            zoomOut.textContent = '100%';
-            return;
-        }
-        const base = fitScale();
-        const rel = state.view.scale / base;
-        zoomEl.value = String(Math.min(5, Math.max(0.2, rel)));
-        zoomOut.textContent = Math.round(rel * 100) + '%';
-    }
-
     function centerImage() {
         if (!state.img) return;
         const s = fitScale();
@@ -637,7 +614,6 @@
             x: (BG_SIZE - imgW(state.img) * s) / 2,
             y: (BG_SIZE - imgH(state.img) * s) / 2
         };
-        updateZoomUI();
     }
 
     function applyRotation() {
@@ -731,7 +707,6 @@
             x: cx - (cx - state.view.x) * ratio,
             y: cy - (cy - state.view.y) * ratio
         };
-        updateZoomUI();
     }
 
     canvas.addEventListener('pointerdown', (e) => {
@@ -808,13 +783,6 @@
         loadBackground('');
     };
 
-    zoomEl.oninput = () => {
-        const base = fitScale();
-        zoomAt(base * parseFloat(zoomEl.value), BG_SIZE / 2, BG_SIZE / 2);
-        requestRender();
-        saveView();
-    };
-
     new ResizeObserver(() => requestRender()).observe(preview);
 
     // восстановление URL из localStorage
@@ -826,7 +794,6 @@
     restoreSceneContent();
 
     // --- СКАЧИВАНИЕ / ПОДЕЛИТЬСЯ ---
-    // Превращаем текущий фон в <img> (dataURL 1000x1000), чтобы html2canvas его захватил
     function snapshotBgAsImg() {
         if (!state.src) return null;
         const tmp = document.createElement('canvas');
@@ -858,7 +825,6 @@
 
         const board = document.getElementById('board');
 
-        // Временно подменяем canvas на <img> с фоном
         const bgImg = snapshotBgAsImg();
         let canvasWasVisible = false;
         if (bgImg) {
@@ -867,7 +833,6 @@
             board.insertBefore(bgImg, board.firstChild);
         }
 
-        // Клон board (в нём уже есть <img> фон)
         const clone = board.cloneNode(true);
         clone.style.transform = 'none';
         clone.style.position = 'fixed';
@@ -878,7 +843,6 @@
         clone.style.setProperty('--k', '1');
         document.body.appendChild(clone);
 
-        // Убираем временный <img> из реального board
         if (bgImg) {
             board.removeChild(bgImg);
             canvas.style.display = '';
