@@ -364,22 +364,14 @@
         <span>Масштаб</span>
         <input type="range" id="zoom" min="0.2" max="5" step="0.01" value="1" />
         <output id="zoomOut">100%</output>
-        <button type="button" id="centerBg" class="secondary-btn">По центру</button>
-    </div>
-    <div class="btn-row">
-        <button type="button" id="fillBg" class="secondary-btn">Заполнить кадр</button>
-        <button type="button" id="rotL" class="secondary-btn">↶ Повернуть</button>
-        <button type="button" id="rotR" class="secondary-btn">↷ Повернуть</button>
-        <button type="button" id="flipH" class="secondary-btn">⇋ Отразить</button>
-        <button type="button" id="flipV" class="secondary-btn">⇅ Отразить</button>
     </div>
     <p style="font-size:13px;color:#8e8e93;margin:0;">Фон можно двигать пальцем или мышью, масштаб — щипком или колесом.</p>
 </div>
 
 <div class="actions-bar">
     <div class="btn-group">
-        <button type="button" id="btnDownload" class="primary-btn">⬇ Скачать</button>
-        <button type="button" id="btnShare" class="secondary-btn">📤 Поделиться</button>
+        <button type="button" id="btnDownload" class="primary-btn">Скачать</button>
+        <button type="button" id="btnShare" class="secondary-btn">Поделиться</button>
     </div>
 </div>
 
@@ -393,6 +385,23 @@
     let activeElement = null;
     let activeType = null;
     let applyTimer = null;
+
+    // --- Хранилище состояния ---
+    const STORE_PREFIX = 'scene.';
+    const store = {
+        get(key, fallback) {
+            try {
+                const raw = localStorage.getItem(STORE_PREFIX + key);
+                return raw === null ? fallback : JSON.parse(raw);
+            } catch { return fallback; }
+        },
+        set(key, value) {
+            try { localStorage.setItem(STORE_PREFIX + key, JSON.stringify(value)); } catch {}
+        },
+        remove(key) {
+            try { localStorage.removeItem(STORE_PREFIX + key); } catch {}
+        }
+    };
 
     const toastEl = document.getElementById('toast');
     function showToast(msg, ms = 2200) {
@@ -469,6 +478,41 @@
         }
     });
 
+    // --- Сохранение/восстановление контента сцены ---
+    function saveSceneContent() {
+        const layers = {};
+        document.querySelectorAll('.layer[data-id]').forEach(el => {
+            const img = el.querySelector('img');
+            if (img) layers[el.dataset.id] = img.src;
+        });
+        const scores = [];
+        document.querySelectorAll('.score').forEach(el => {
+            scores.push({ style: el.getAttribute('style') || '', text: el.textContent });
+        });
+        store.set('layers', layers);
+        store.set('scores', scores);
+    }
+
+    function restoreSceneContent() {
+        const layers = store.get('layers', null);
+        if (layers) {
+            document.querySelectorAll('.layer[data-id]').forEach(el => {
+                const src = layers[el.dataset.id];
+                const img = el.querySelector('img');
+                if (src && img) img.src = src;
+            });
+        }
+        const scores = store.get('scores', null);
+        if (scores) {
+            document.querySelectorAll('.score').forEach((el, i) => {
+                const s = scores[i];
+                if (!s) return;
+                if (s.style) el.setAttribute('style', s.style);
+                if (typeof s.text === 'string') el.textContent = s.text;
+            });
+        }
+    }
+
     function applyValue() {
         if (!activeElement) return;
         const input = document.getElementById('mainInput');
@@ -484,6 +528,7 @@
         } else if (activeType === 'text') {
             activeElement.textContent = value;
         }
+        saveSceneContent();
     }
 
     const inputEl = document.getElementById('mainInput');
@@ -528,6 +573,20 @@
 
     const imgW = e => e instanceof HTMLImageElement ? e.naturalWidth : e.width;
     const imgH = e => e instanceof HTMLImageElement ? e.naturalHeight : e.height;
+
+    function saveView() {
+        store.set('view', state.view);
+    }
+    function restoreView() {
+        const v = store.get('view', null);
+        if (v && typeof v.scale === 'number' && isFinite(v.scale)) {
+            state.view = { scale: v.scale, x: v.x || 0, y: v.y || 0 };
+            updateZoomUI();
+            requestRender();
+            return true;
+        }
+        return false;
+    }
 
     function fitScale() {
         if (!state.img) return 1;
@@ -581,17 +640,6 @@
         updateZoomUI();
     }
 
-    function fillImage() {
-        if (!state.img) return;
-        const s = Math.max(BG_SIZE / imgW(state.img), BG_SIZE / imgH(state.img));
-        state.view = {
-            scale: s,
-            x: (BG_SIZE - imgW(state.img) * s) / 2,
-            y: (BG_SIZE - imgH(state.img) * s) / 2
-        };
-        updateZoomUI();
-    }
-
     function applyRotation() {
         if (!state.img) return;
         if (!state.rot && !state.flipH && !state.flipV) {
@@ -611,12 +659,13 @@
         state.src = c;
     }
 
-    function loadBackground(src, restoreView = false) {
+    function loadBackground(src, restoreViewFlag = false) {
         if (!src) {
             state.src = null;
             state.img = null;
             canvas.classList.remove('visible');
-            localStorage.removeItem('scene.bgUrl');
+            store.remove('bgUrl');
+            store.remove('view');
             return;
         }
         const img = new Image();
@@ -629,11 +678,17 @@
             state.flipV = false;
             applyRotation();
             canvas.classList.add('visible');
-            centerImage();
-            requestRender();
-            if (!restoreView && !src.startsWith('blob:')) {
-                localStorage.setItem('scene.bgUrl', src);
+
+            if (restoreViewFlag && restoreView()) {
+                // восстановлен сохранённый view
+            } else {
+                centerImage();
             }
+            requestRender();
+            if (!restoreViewFlag && !src.startsWith('blob:')) {
+                store.set('bgUrl', src);
+            }
+            saveView();
         };
         img.onerror = () => showToast('Не удалось загрузить картинку');
         img.src = src;
@@ -707,6 +762,7 @@
             };
         }
         requestRender();
+        saveView();
     });
 
     function endPointer(e) {
@@ -714,6 +770,7 @@
         if (pointers.size) return startGesture();
         gesture = null;
         canvas.classList.remove('dragging');
+        saveView();
     }
     canvas.addEventListener('pointerup', endPointer);
     canvas.addEventListener('pointercancel', endPointer);
@@ -724,12 +781,16 @@
         const p = clientToBoard(e.clientX, e.clientY);
         zoomAt(state.view.scale * Math.exp(-e.deltaY * 0.0015), p.x, p.y);
         requestRender();
+        saveView();
     }, { passive: false });
 
     // --- кнопки фона ---
     document.getElementById('applyBgUrl').onclick = () => {
         const v = bgUrl.value.trim();
-        if (v) loadBackground(v);
+        if (v) {
+            store.remove('view');
+            loadBackground(v);
+        }
     };
     bgUrl.addEventListener('keydown', e => e.key === 'Enter' && document.getElementById('applyBgUrl').click());
 
@@ -737,6 +798,7 @@
         const f = e.target.files?.[0];
         if (!f) return;
         if (!f.type.startsWith('image/')) return showToast('Это не изображение');
+        store.remove('view');
         loadBackground(URL.createObjectURL(f));
         e.target.value = '';
     };
@@ -746,27 +808,22 @@
         loadBackground('');
     };
 
-    document.getElementById('fillBg').onclick = () => { fillImage(); requestRender(); };
-    document.getElementById('centerBg').onclick = () => { centerImage(); requestRender(); };
-    document.getElementById('rotL').onclick = () => { state.rot = (state.rot - 1 + 4) % 4; applyRotation(); centerImage(); requestRender(); };
-    document.getElementById('rotR').onclick = () => { state.rot = (state.rot + 1) % 4; applyRotation(); centerImage(); requestRender(); };
-    document.getElementById('flipH').onclick = () => { state.flipH = !state.flipH; applyRotation(); centerImage(); requestRender(); };
-    document.getElementById('flipV').onclick = () => { state.flipV = !state.flipV; applyRotation(); centerImage(); requestRender(); };
-
     zoomEl.oninput = () => {
         const base = fitScale();
         zoomAt(base * parseFloat(zoomEl.value), BG_SIZE / 2, BG_SIZE / 2);
         requestRender();
+        saveView();
     };
 
     new ResizeObserver(() => requestRender()).observe(preview);
 
     // восстановление URL из localStorage
-    const savedBg = localStorage.getItem('scene.bgUrl');
+    const savedBg = store.get('bgUrl', '');
     if (savedBg) {
         bgUrl.value = savedBg;
         loadBackground(savedBg, true);
     }
+    restoreSceneContent();
 
     // --- СКАЧИВАНИЕ / ПОДЕЛИТЬСЯ ---
     // Превращаем текущий фон в <img> (dataURL 1000x1000), чтобы html2canvas его захватил
